@@ -263,13 +263,82 @@ known to within the noise of a quantity nothing can predict, and the decision en
 on a number that is measured rather than modelled. The UI must present it as an estimate
 with that stated, not as a model output.
 
+## The bar was wrong, and a ranking metric shows it
+
+Everything above measures the models with accuracy and F1, concludes that none of them
+clears both baselines, and is correct about that. It is also asking the wrong question.
+
+**A control tower does not answer "is this order late, yes or no". It works down a list.**
+The product is a *ranking*, and neither accuracy nor F1 measures one — both collapse a
+probability to a label at some threshold and throw the ordering away. Adding two
+threshold-free ranking metrics changes the picture:
+
+| model | accuracy | f1 | roc auc | avg precision | tier |
+|---|---|---|---|---|---|
+| baseline: majority class | 0.5511 | 0.7106 | – | – | course |
+| baseline: shipping-mode rule | 0.6956 | 0.6635 | 0.7341 | 0.7528 | course |
+| logistic regression | 0.6992 | 0.6873 | 0.7346 | 0.8015 | course |
+| random forest | 0.6794 | 0.6873 | 0.7379 | 0.8074 | course |
+| voting | 0.6992 | 0.6873 | 0.7471 | 0.8193 | course |
+| adaboost | 0.7017 | 0.6840 | 0.7468 | 0.7827 | course |
+| gradient boosting | 0.6969 | 0.6670 | 0.7485 | 0.8200 | course |
+| **one-hot random forest** | 0.7008 | 0.6828 | **0.7518** | **0.8215** | declared |
+| one-hot logistic | 0.6940 | 0.6662 | 0.7472 | 0.8187 | declared |
+| hist gradient boosting | 0.6802 | 0.6798 | 0.7360 | 0.8127 | declared |
+| calibrated hist gradient boosting | 0.6909 | 0.6672 | 0.7392 | 0.8130 | declared |
+| naive bayes | 0.6837 | 0.6559 | 0.7354 | 0.8020 | course |
+| decision tree | 0.5972 | 0.6379 | 0.5919 | 0.6033 | course |
+| k nearest neighbours | 0.5864 | 0.6069 | 0.6322 | 0.6860 | course |
+| support vector machine | 0.6355 | 0.5698 | – | – | course |
+
+On **average precision** — the ranking measure that follows the positive class, which is
+the one that costs money when missed — the models beat the rule baseline by **0.069**.
+0.8215 against 0.7528. That is a real, useful margin, and accuracy and F1 hid all of it:
+on those two the same models looked interchangeable with a four-line lookup.
+
+The earlier conclusion, that nothing clears the bar, stands as written for the bar it was
+measured against. The correction is that the bar was measuring the wrong thing.
+
+## What the added tools bought, and what they did not
+
+Each name outside the course material is declared in `scripts/check_taught.py` with the
+measurement that justified it. `python scripts/check_taught.py --report` prints the
+breakdown; the course material still supplies 24 of the 29 scikit-learn names in `src/`.
+
+**One-hot encoding earned its place twice.** It gives the best ranking in the table, and it
+repairs the calibration defect that `LabelEncoder` caused:
+
+| band | orders | mean predicted | observed rate | gap |
+|---|---:|---:|---:|---:|
+| (0.3, 0.4] | 3,523 | 0.3861 | 0.3244 | +0.062 |
+| (0.4, 0.5] | 11,286 | 0.4387 | 0.3932 | +0.045 |
+| (0.5, 0.6] | 945 | 0.5257 | 0.5672 | −0.042 |
+| (0.6, 0.7] | 1,292 | 0.6781 | 0.6772 | +0.001 |
+| (0.7, 0.8] | 4,284 | 0.7401 | 0.8109 | −0.071 |
+| (0.8, 0.9] | 3,039 | 0.8538 | 0.9753 | −0.122 |
+
+The observed rate now rises monotonically — 0.32, 0.39, 0.57, 0.68, 0.81, 0.98 — and the
+worst gap falls from **0.334 to 0.122**. Under integer codes the ordering was *inverted*
+between 0.6 and 0.9. Since ranking is the product, that was the most serious defect in the
+project and it is now gone.
+
+**Boosting bought nothing**, which is the useful part. `HistGradientBoostingClassifier`,
+the strongest learner available, ranks *below* the one-hot random forest (0.7360 against
+0.7518). Isotonic recalibration on top of it moves ROC-AUC by 0.003. That is the evidence
+the oracle ceiling was honest: there is no model waiting to do dramatically better, so
+XGBoost and LightGBM stay out of the repository rather than being tried and quietly
+forgotten.
+
 ## Where this leaves the project
 
-The honest summary is that **on this dataset, with these features, the delivery-risk problem
-is close to solved by one `if` statement, and ten taught estimators cannot do much better.**
+**The delivery-risk problem is mostly solved by one `if` statement, and the models add a
+real but modest amount on top of it — visible only when you measure ranking.**
 
-That is not a disappointing result, it is the result. It was predictable from the audit —
-`Shipping Mode` spans 57 points of late rate and everything else spans under 3 — and the
-value of the project is that it says so with numbers instead of shipping a 0.98 that is a
-leak. What remains genuinely useful is the second model, the margin ratio, and the decision
-layer that turns two numbers into one ranked action.
+That is the result, not a disappointment. It was predictable from the audit: `Shipping
+Mode` spans 57 points of late rate and everything else spans under three. The value of the
+project is that it says so with numbers, and that it says so instead of shipping a 0.98
+that is a leak.
+
+What ChainSight ships, then, is the one-hot random forest for the ranking it provides, the
+measured mean margin in place of a margin model that cannot exist, and the decision layer
+that turns a probability and a known order value into one ordered list of actions.

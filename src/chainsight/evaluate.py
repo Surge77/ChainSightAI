@@ -17,10 +17,12 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import (
     accuracy_score,
+    average_precision_score,
     confusion_matrix,
     mean_absolute_error,
     mean_squared_error,
     r2_score,
+    roc_auc_score,
 )
 
 #: Predicted probability at or above this counts as late, until the decision engine derives
@@ -80,6 +82,23 @@ def regression_scores(Y_true: pd.Series, Y_pred: np.ndarray | pd.Series) -> dict
     }
 
 
+def ranking_scores(Y_true: pd.Series, probabilities: np.ndarray) -> dict[str, float]:
+    """How well the model *orders* orders, which is what a control tower actually needs.
+
+    Accuracy and F1 both answer a question nobody here asks -- "is this order late, yes or
+    no" -- and on this dataset they answered it so similarly for every model that they hid
+    the difference between them. Ranking is the product: the operator works down a list.
+
+    Both numbers are threshold-free, and they disagree usefully. ROC-AUC weights the two
+    classes equally; average precision follows the positive class, which is the one that
+    costs money when missed.
+    """
+    return {
+        "roc auc": float(roc_auc_score(Y_true, probabilities)),
+        "avg precision": float(average_precision_score(Y_true, probabilities)),
+    }
+
+
 def threshold_sweep(
     Y_true: pd.Series,
     probabilities: np.ndarray,
@@ -135,6 +154,10 @@ def as_markdown(frame: pd.DataFrame, *, corner: str = "", decimals: int | None =
     """
 
     def cell(value: object) -> str:
+        # A model without `predict_proba` has no ranking score, and an empty cell says that
+        # better than `nan` does. `SVC` is the case that put this here.
+        if isinstance(value, float) and np.isnan(value):
+            return "-"
         return f"{value:.{decimals}f}" if decimals is not None else str(value)
 
     header = f"| {corner} | " + " | ".join(str(name) for name in frame.columns) + " |"

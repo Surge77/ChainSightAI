@@ -39,6 +39,8 @@ class Result:
     rows_used: int
     rows_available: int
     probabilities: np.ndarray | None = None
+    #: True when this row reaches outside the course material, so the table can say so.
+    declared: bool = False
 
     @property
     def was_capped(self) -> bool:
@@ -65,13 +67,21 @@ def run(
 ) -> list[Result]:
     """Fit, tune and score every candidate on one chronological split."""
     parts = split.by_date(frame)
-    space = features.FeatureSpace.fit(parts.train)
-
-    X_train = space.transform(parts.train)
-    X_test = space.transform(parts.test)
+    # Both encodings are fitted once on the training slice, and each candidate is scored on
+    # the one it declares. Fitting per candidate would re-learn the same mappings ten times.
+    spaces = {
+        encoding: features.FeatureSpace.fit(parts.train, encoding=encoding)
+        for encoding in ("codes", "one-hot")
+    }
+    matrices = {
+        encoding: (space.transform(parts.train), space.transform(parts.test))
+        for encoding, space in spaces.items()
+    }
     Y_train = parts.train[schema.LATE_TARGET]
     Y_test = parts.test[schema.LATE_TARGET]
 
+    rule = baselines.GroupRate.fit(parts.train)
+    rule_probabilities = rule.predict_proba(parts.test)
     results = [
         _baseline_result(
             "baseline: majority class",
@@ -81,28 +91,38 @@ def run(
         ),
         _baseline_result(
             "baseline: shipping-mode rule",
-            baselines.GroupRate.fit(parts.train).predict(parts.test),
+            rule.predict(parts.test),
             Y_test,
             len(parts.train),
-            probabilities=baselines.GroupRate.fit(parts.train).predict_proba(parts.test),
+            probabilities=rule_probabilities,
+            # Without this the models would be compared on a metric their baseline lacks.
+            extra=evaluate.ranking_scores(Y_test, rule_probabilities),
         ),
     ]
 
-    wanted = models.CLASSIFIERS if only is None else [models.by_name(name) for name in only]
+    available = (*models.CLASSIFIERS, *models.DECLARED_CLASSIFIERS)
+    wanted = available if only is None else [models.by_name(name) for name in only]
     for candidate in wanted:
+        X_train, X_test = matrices[candidate.encoding]
         started = time.perf_counter()
         tuned = tuning.tune(candidate, X_train, Y_train)
         elapsed = time.perf_counter() - started
 
+        probabilities = probabilities_of(tuned.estimator, X_test)
+        scores = evaluate.classification_scores(Y_test, tuned.estimator.predict(X_test))
+        if probabilities is not None:
+            scores |= evaluate.ranking_scores(Y_test, probabilities)
+
         results.append(
             Result(
                 name=candidate.name,
-                scores=evaluate.classification_scores(Y_test, tuned.estimator.predict(X_test)),
+                scores=scores,
                 parameters=tuned.parameters,
                 seconds=elapsed,
                 rows_used=tuned.rows_used,
                 rows_available=tuned.rows_available,
-                probabilities=probabilities_of(tuned.estimator, X_test),
+                probabilities=probabilities,
+                declared=models.is_declared(candidate.name),
             )
         )
     return results
@@ -185,10 +205,11 @@ def _baseline_result(
     Y_test: pd.Series,
     rows: int,
     probabilities: np.ndarray | None = None,
+    extra: dict[str, float] | None = None,
 ) -> Result:
     return Result(
         name=name,
-        scores=evaluate.classification_scores(Y_test, predicted),
+        scores=evaluate.classification_scores(Y_test, predicted) | (extra or {}),
         parameters={},
         seconds=0.0,
         rows_used=rows,
@@ -210,6 +231,7 @@ def table(results: list[Result]) -> str:
                     if result.was_capped
                     else f"{result.rows_used:,}"
                 ),
+                "tier": "declared" if result.declared else "course",
             }
             for result in results
         ]

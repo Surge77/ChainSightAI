@@ -5,6 +5,10 @@ Things known to be missing, so a cold start does not rediscover them. Closed ite
 
 ## Next
 
+- [ ] **Decision engine** - turn the probability and the known order value into one ranked
+      action, with the threshold derived from the cost of intervening rather than left at
+      0.5. Then persistence and the CLI, then the web app.
+
 - [ ] **Phase 8** — the margin regressor on `Order Item Profit Ratio`. Beat MAE 0.2930.
       Only `LinearRegression`, `Ridge`, `Lasso` and `PolynomialFeatures` are available, so
       the categorical block carrying the 0.1385 `Category Name` spread is where to look.

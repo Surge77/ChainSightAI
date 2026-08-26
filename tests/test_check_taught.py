@@ -11,14 +11,16 @@ from pathlib import Path
 
 import pytest
 from check_taught import (
+    DECLARED,
     TAUGHT_CHEATSHEET,
     TAUGHT_NOTEBOOK,
+    census,
     inspect_file,
     main,
     run,
 )
 
-DEFAULT = TAUGHT_NOTEBOOK | TAUGHT_CHEATSHEET
+DEFAULT = TAUGHT_NOTEBOOK | TAUGHT_CHEATSHEET | frozenset(DECLARED)
 
 
 def write(tmp_path: Path, source: str) -> Path:
@@ -33,14 +35,28 @@ def test_accepts_a_name_executed_in_the_notebooks(tmp_path: Path) -> None:
     assert inspect_file(path, DEFAULT) == []
 
 
-def test_rejects_a_name_the_course_never_covered(tmp_path: Path) -> None:
-    path = write(tmp_path, "from sklearn.ensemble import HistGradientBoostingClassifier\n")
+def test_rejects_a_name_that_is_neither_taught_nor_declared(tmp_path: Path) -> None:
+    path = write(tmp_path, "from sklearn.ensemble import StackingClassifier\n")
 
     findings = inspect_file(path, DEFAULT)
 
     assert len(findings) == 1
-    assert findings[0].name == "HistGradientBoostingClassifier"
+    assert findings[0].name == "StackingClassifier"
     assert findings[0].reason == "NOT TAUGHT"
+
+
+def test_a_declared_name_passes_and_carries_its_reason(tmp_path: Path) -> None:
+    """Reaching outside the curriculum is allowed; doing it silently is not."""
+    path = write(tmp_path, "from sklearn.preprocessing import OneHotEncoder\n")
+
+    assert inspect_file(path, DEFAULT) == []
+    assert DECLARED["OneHotEncoder"].strip()
+
+
+def test_every_declared_name_says_why_it_was_reached_for() -> None:
+    """The whole mechanism: adding a name means putting the justification in the diff."""
+    for name, reason in DECLARED.items():
+        assert len(reason.strip()) > 40, f"{name} is declared without a real reason"
 
 
 def test_sees_every_name_inside_a_parenthesised_import(tmp_path: Path) -> None:
@@ -49,17 +65,14 @@ def test_sees_every_name_inside_a_parenthesised_import(tmp_path: Path) -> None:
         tmp_path,
         "from sklearn.ensemble import (\n"
         "    RandomForestClassifier,\n"
-        "    HistGradientBoostingClassifier,\n"
+        "    ExtraTreesClassifier,\n"
         "    StackingClassifier,\n"
         ")\n",
     )
 
     findings = inspect_file(path, DEFAULT)
 
-    assert sorted(f.name for f in findings) == [
-        "HistGradientBoostingClassifier",
-        "StackingClassifier",
-    ]
+    assert sorted(f.name for f in findings) == ["ExtraTreesClassifier", "StackingClassifier"]
 
 
 def test_cheatsheet_tier_passes_by_default_and_fails_under_strict(tmp_path: Path) -> None:
@@ -103,17 +116,29 @@ def test_the_repository_itself_is_clean() -> None:
     assert main([]) == 0
 
 
-def test_whatever_strict_mode_rejects_is_only_ever_the_cheatsheet_tier() -> None:
+def test_whatever_strict_mode_rejects_is_a_named_tier_and_never_a_surprise() -> None:
     """`--strict` is a record, not a pass/fail, and this is the line it must not cross.
 
-    Leaning on a name that was revised but never executed in a notebook is a small stretch,
-    and the strict run exists to say how often. Reaching outside the curriculum altogether
-    is not a stretch, it is a different project, and it fails here as well as in the
-    default run.
+    It may reject a cheatsheet name or a declared one, because both are departures from the
+    notebooks and the strict run exists to count them. It may never reject something that
+    is simply unaccounted for: that would mean a name reached `src/` without anybody
+    writing down why, which is the one thing this file exists to prevent.
     """
     reasons = {finding.reason for finding in run(strict=True)}
 
-    assert reasons <= {"CHEATSHEET TIER, REJECTED BY --strict"}
+    assert reasons <= {
+        "CHEATSHEET TIER, REJECTED BY --strict",
+        "DECLARED, REJECTED BY --strict",
+    }
+
+
+def test_the_course_material_is_still_the_backbone() -> None:
+    """The original promise, kept checkable: most of what `src/` imports is taught."""
+    counted = census()
+    taught = len(counted["notebook"]) + len(counted["cheatsheet"])
+    total = taught + len(counted["declared"])
+
+    assert taught / total > 0.7
 
 
 def test_finding_renders_a_clickable_location(tmp_path: Path) -> None:

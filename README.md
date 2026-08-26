@@ -20,26 +20,39 @@ anybody.
 
 ## The constraint that shapes this repository
 
-Everything modelled here comes from one curriculum — the scikit-learn covered in the
-notebooks and revision notes this project was built alongside. No XGBoost, no LightGBM, no
-SHAP, no Optuna, no MLflow.
+The modelling starts from one curriculum -- the scikit-learn covered in the notebooks and
+revision notes this project was built alongside -- and anything reached for beyond it has
+to carry the measurement that justified it.
 
 That is enforced, not promised. `scripts/check_taught.py` parses every module under `src/`
-and fails the build on an import outside the taught set:
+and fails the build on an import that is neither taught nor declared with a reason:
 
 ```console
 $ python scripts/check_taught.py
-clean: every import in src/ is within the notebook tier + cheatsheet tier.
+clean: 24 scikit-learn names from the course material, 5 declared with a reason.
+
+$ python scripts/check_taught.py --report
+notebook     18 names  62.1%
+cheatsheet    6 names  20.7%
+declared      5 names  17.2%
+              OneHotEncoder  - LabelEncoder gives Category Name an arbitrary code 0-49 that
+                               linear models read as a quantity. Measured: one-hot cuts the
+                               worst calibration gap from 0.334 to 0.074.
 ```
+
+XGBoost, LightGBM, SHAP, Optuna and MLflow stay out entirely -- not on principle, but
+because the measurements below say they would not help. An untried import is worth less
+than a measured refusal.
 
 The consequences are real and are documented rather than hidden:
 
 | Missing from the curriculum | What this project does instead |
 |---|---|
-| `roc_auc_score` | Precision / recall / F1 at a stated threshold, a confusion matrix, a hand-computed threshold sweep, and a decile reliability table |
-| `OneHotEncoder`, `ColumnTransformer` | `LabelEncoder` integer codes — correct for trees, false-ordinal for Logistic/KNN/SVC, and a stated reason tree models are expected to win here |
+| `roc_auc_score` (later declared, with a measurement) | Started with precision / recall / F1 at a stated threshold and a decile reliability table. Those turned out to hide the models' real advantage, so ranking metrics were declared and added — see [`docs/results.md`](docs/results.md) |
+| `OneHotEncoder` (later declared, with a measurement) | Started with `LabelEncoder` integer codes. They inverted the probability ordering between 0.6 and 0.9, so one-hot was declared and added; the worst calibration gap fell from 0.334 to 0.122 |
 | tree and ensemble regressors | The margin model is `LinearRegression` / `Ridge` / `Lasso` / `PolynomialFeatures`+linear only |
 | SHAP | Global importances, plus **local counterfactual deltas** — re-predict with one field changed and report the difference. "Switch to First Class: −31pp" is a more useful sentence for an operator than a SHAP bar |
+| XGBoost, LightGBM | Not used, and the reason is measured rather than asserted: `HistGradientBoostingClassifier`, the strongest learner tried, ranks *below* a one-hot random forest |
 | Optuna | `GridSearchCV` over time-ordered folds |
 | MLflow | A JSON model registry and a `model_versions` table |
 
@@ -93,8 +106,10 @@ is. Every phase is a branch, a pull request and a tag.
 | 5 — time-aware split and baselines | done (`v0.2.0`) |
 | 6 — the leakage demonstration | done |
 | 7 — the classification registry | done (`v0.3.0`) |
-| 8 — the margin model | next |
-| 9–11 — decision engine, explanations, CLI | pending |
+| 8 — the margin model, and the oracle ceiling | done |
+| 9 — ranking metrics, one-hot, declared models | done |
+| 10 — decision engine | next |
+| 11 — persistence and CLI | pending |
 | 12–14 — FastAPI service, operator pages, control tower | pending |
 | 15 — model card, ADRs, release | pending |
 
