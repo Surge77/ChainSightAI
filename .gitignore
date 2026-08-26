@@ -1,0 +1,47 @@
+# The DataCo dataset is ~90 MB and is not ours to redistribute. `scripts/fetch_data.py`
+# pulls it; `data/sample_orders.csv` is the committed slice the tests run on.
+data/raw/*
+!data/raw/.gitkeep
+
+# Trained artefacts are reproducible from the code and the data. Committing them would
+# also commit a joblib file, and loading a joblib file executes whatever is inside it.
+artifacts/
+*.joblib
+
+# Local application state
+*.db
+*.sqlite3
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+
+# Tooling caches
+.pytest_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+bash.exe.stackdump
+
+# Secrets. Nothing in this repository should ever need one, which is the point.
+.env
+.env.*
+*.pem
+*.key
+*.pfx

@@ -1,0 +1,117 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chainsight"
+version = "0.1.0"
+description = "Pre-dispatch late-delivery risk and order margin on a leakage-audited feature set, behind a cost-sensitive decision engine."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Tejas Deshmane", email = "tejasdeshmane66@gmail.com" }]
+keywords = [
+    "supply-chain",
+    "late-delivery-prediction",
+    "data-leakage",
+    "cost-sensitive-classification",
+    "scikit-learn",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Education",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+]
+
+# Pinned exactly, not with `>=`. A portfolio repository that cannot be reproduced in two
+# years is not evidence of anything, and "it worked on my machine in 2026" is the failure
+# mode this line exists to prevent.
+#
+# seaborn is a runtime dependency rather than a notebook extra because the plotting
+# helpers in `chainsight` import it directly.
+dependencies = [
+    "pandas==3.0.5",
+    "numpy==2.4.6",
+    "matplotlib==3.11.1",
+    "seaborn==0.13.2",
+    "scikit-learn==1.9.0",
+    "joblib==1.5.3",
+]
+
+[project.optional-dependencies]
+# The web app is an extra on purpose: nothing under `src/chainsight/` imports FastAPI, so
+# somebody who wants the models should not have to install a web server to get them.
+web = [
+    "fastapi==0.141.1",
+    "uvicorn[standard]==0.52.4",
+    "jinja2==3.1.6",
+    "python-multipart==0.0.32",
+    "sqlalchemy==2.0.52",
+    "bcrypt==5.0.0",
+    "itsdangerous==2.2.0",
+]
+dev = [
+    "ruff==0.16.4",
+    "pyright==1.1.411",
+    "pandas-stubs==3.0.5.260730",
+    "pytest==9.1.1",
+    "pytest-cov==7.1.0",
+    "httpx==0.28.1",
+]
+
+[project.urls]
+Homepage = "https://github.com/Surge77/ChainSightAI"
+Repository = "https://github.com/Surge77/ChainSightAI"
+Issues = "https://github.com/Surge77/ChainSightAI/issues"
+
+[project.scripts]
+chainsight = "chainsight.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+chainsight = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+# `scripts/` is on the path so the taught-set gate can be unit tested like any other code
+# rather than only exercised through a subprocess.
+pythonpath = ["src", "scripts"]
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
+include = ["src", "scripts", "tests"]
+extraPaths = ["scripts"]
+pythonVersion = "3.11"
+typeCheckingMode = "basic"
+reportMissingImports = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "N", "UP", "B", "SIM", "C4", "RUF"]
+# `X_train` and `Y_test` are the course notebooks' own names, and a capital X for a feature
+# matrix is scikit-learn's convention in its own documentation. Renaming them to satisfy
+# pep8 would make every function here read differently from the material it mirrors.
+ignore = ["N803", "N806"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["chainsight", "chainsight_web"]
+
+[tool.ruff.lint.per-file-ignores]
+"*.ipynb" = ["E402", "F401"]
+"tests/*" = ["S101"]
+
+[tool.coverage.run]
+source = ["src"]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = ["pragma: no cover", "if TYPE_CHECKING:", 'if __name__ == "__main__":']
