@@ -5,13 +5,16 @@ Things known to be missing, so a cold start does not rediscover them. Closed ite
 
 ## Next
 
-- [ ] **Phase 6** — `leakage.py` and `chainsight leakage`: train once with the post-dispatch
-      columns and once without, and print both numbers side by side. Also compare the
-      chronological split against the shuffled one, which the stable late rate across
-      slices suggests will cost almost nothing.
+- [ ] **Phase 7** — the classification registry over the taught estimators, `GridSearchCV`
+      on time-ordered folds, and the threshold sweep. The bar is 0.6956 accuracy and
+      0.7106 F1 **at the same time**.
 
 ## Questions raised and not settled
 
+- [ ] The honest decision tree scores 0.6956 accuracy, matching the one-line shipping-mode
+      rule to four decimals. It appears to have found that rule and nothing else. Confirm
+      in phase 7 by reading the fitted tree, and say so in the results if true - a model
+      that reproduces a baseline exactly has not earned its complexity.
 - [ ] Product identity may be worth dropping entirely. Fitted before 2017 and applied
       after, `Product Name` is unseen on 19.56% of rows and `Category Name` on 17.38%.
       A feature that is absent for a fifth of the future is a liability; measure whether

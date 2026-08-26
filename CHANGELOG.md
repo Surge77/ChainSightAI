@@ -52,6 +52,14 @@ All notable changes to this project are recorded here. The format follows
   and 0.7106 F1; the one-line shipping-mode rule scores 0.6956 accuracy and 0.6635 F1. A
   model has to clear both at once. The mean-margin baseline sets MAE at 0.2930.
 
+- `src/chainsight/leakage.py` and `docs/leakage.md`: the same estimator trained twice, and
+  the numbers printed side by side. With the post-dispatch columns a depth-5 tree scores
+  **1.0000** accuracy; without them, 0.6956. The margin leak is worse and quieter: handing
+  a linear model `Order Profit Per Order` reaches R-squared 0.1938, which reads as a
+  mediocre model, but adding the single ratio `profit / order total` reaches **1.0000**,
+  because that quotient is the target. A shuffled split, by contrast, scores 0.6923 against
+  the chronological 0.6956 - it does not flatter the model on this table at all.
+
 ### Changed
 - CI now runs `scripts/render_audit.py --check`, and uses `actions/checkout@v5` and
   `actions/setup-python@v6` — the v4/v5 pair is pinned to a deprecated Node runtime.
