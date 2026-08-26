@@ -1,0 +1,17 @@
+# Normalise line endings so a Windows checkout and a Linux CI runner hash the same files.
+* text=auto eol=lf
+
+*.py    text eol=lf
+*.md    text eol=lf
+*.toml  text eol=lf
+*.yml   text eol=lf
+*.csv   text eol=lf
+*.html  text eol=lf
+*.css   text eol=lf
+
+*.png   binary
+*.jpg   binary
+*.joblib binary
+
+# Notebook diffs are noise in review; the rendered output is what matters.
+*.ipynb linguist-documentation

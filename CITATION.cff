@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+title: "ChainSight: pre-dispatch late-delivery risk and order margin under a leakage-audited feature set"
+message: "If you use this software or its leakage analysis, please cite it."
+type: software
+authors:
+  - given-names: Tejas
+    family-names: Deshmane
+    email: tejasdeshmane66@gmail.com
+repository-code: "https://github.com/Surge77/ChainSightAI"
+url: "https://github.com/Surge77/ChainSightAI"
+abstract: >-
+  ChainSight predicts, for an order that has not yet shipped, the probability of late
+  delivery and the expected margin, and combines the two through a cost-sensitive decision
+  engine. Its central contribution is methodological rather than architectural: the DataCo
+  Smart Supply Chain dataset's late-delivery label is derived from post-dispatch columns,
+  and its profit column is a near-duplicate of a feature. ChainSight removes every column
+  unavailable at order time and reports, side by side, what the leaked and the honest
+  models score. The modelling is restricted to a fixed scikit-learn curriculum, enforced
+  by a static import gate.
+keywords:
+  - supply chain
+  - late delivery prediction
+  - data leakage
+  - cost-sensitive classification
+  - scikit-learn
+license: MIT
+version: 0.1.0
+date-released: "2026-08-26"

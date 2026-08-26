@@ -1,0 +1,89 @@
+# Security Policy
+
+## Reporting a vulnerability
+
+Open a [private security advisory](https://github.com/Surge77/ChainSightAI/security/advisories/new)
+rather than a public issue. Expect an acknowledgement within seven days.
+
+Please do not open a public issue for anything that would let someone read another user's
+predictions, escalate to the admin role, or execute code on a machine running this app.
+
+## Supported versions
+
+The tip of `main` only. This is a portfolio project, not a maintained product, and no
+patches are backported to tags.
+
+---
+
+## What this project deliberately does
+
+### The dataset contains personal data, and it never enters the repository
+
+The DataCo Smart Supply Chain CSV ships with columns that have no business being in a
+model or in version control:
+
+| Column | Why it is dropped |
+|---|---|
+| `Customer Password` | A password column in a public teaching dataset. Never read, never stored, never logged. |
+| `Customer Email` | Direct identifier. |
+| `Customer Fname`, `Customer Lname` | Direct identifiers. |
+| `Customer Street`, `Customer Zipcode` | Locates a household. `Customer City`/`State`/`Country` are coarse enough to keep. |
+
+`chainsight.ingest` drops these **at load**, before any other code sees the frame, and
+`tests/test_ingest.py` asserts they are absent from the returned columns. They are not
+dropped later, downstream, as a courtesy — a column that never exists cannot leak into a
+log line, a traceback, a feature-importance table, or a committed artefact.
+
+`data/raw/` is gitignored. The only committed slice, `data/sample_orders.csv`, is produced
+by `scripts/make_sample.py`, which runs the same ingest path, so it is post-redaction by
+construction rather than by inspection.
+
+### Model artefacts are code, and are treated as code
+
+`joblib.load` unpickles, and unpickling executes arbitrary code in the current process.
+Loading an artefact somebody sent you is equivalent to running a script they sent you.
+
+Accordingly:
+
+- `artifacts/` and `*.joblib` are gitignored. Nothing in this repository ships a
+  pre-trained binary you are invited to load.
+- `chainsight.persistence` loads only from the configured artefacts directory and refuses
+  a path that resolves outside it, so a crafted filename cannot walk to another location.
+- Every artefact carries a manifest recording the library versions, the feature-set hash
+  and the training dataset hash. A mismatch is a hard error, not a warning: silently
+  serving a model against features it was not trained on is a correctness bug that looks
+  like a working system.
+
+### Web application
+
+- Passwords are hashed with `bcrypt`. No plaintext, no reversible encoding, no home-made
+  hashing.
+- Sessions are signed cookies (`itsdangerous`) with the secret read from the environment.
+  The app **refuses to start** without one rather than falling back to a default — a
+  default secret in a portfolio repo is a forged-session vulnerability with a public key.
+- The admin role is checked server-side on every admin route. It is never inferred from a
+  form field, a cookie value, a query parameter, or a template variable.
+- A user may read only their own orders and predictions. Ownership is filtered in the
+  query, not asserted after the fetch.
+- Every input arriving from the browser is validated by a Pydantic model at the route
+  boundary before it reaches the feature pipeline, the ORM, or the model.
+- SQLAlchemy is used with bound parameters throughout. There is no string-built SQL.
+- CORS is not enabled. The UI is server-rendered from the same origin, so there is no
+  cross-origin case to permit.
+- The app binds `127.0.0.1` by default. It has no TLS termination, no rate limiting, and
+  no account-recovery flow; it is not built to face the public internet, and the README
+  says so.
+
+### What is not defended against
+
+Stated plainly so nobody assumes otherwise: no CSRF tokens on form posts yet, no
+brute-force lockout on login, no audit log of admin actions, and no protection against a
+malicious operator poisoning the retraining set through the UI. These are tracked in
+`TODO.md`. A deployment facing anything but localhost needs all four.
+
+## Secrets
+
+There are none in this repository, and there is nothing here that needs one beyond the
+session secret and an optional Kaggle credential, both read from the environment. CI runs
+with no secrets configured. If you find a credential in the history, report it as a
+vulnerability — do not open an issue.
