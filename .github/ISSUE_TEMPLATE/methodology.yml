@@ -1,0 +1,48 @@
+name: Methodology challenge
+description: You think a number here is wrong, a feature leaks, or an evaluation is unsound.
+labels: ["methodology"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This is the most valuable kind of issue this project can receive. The whole point
+        of ChainSight is that its numbers are honest; if one is not, that is a defect of
+        the same severity as a crash.
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What kind of problem
+      options:
+        - A feature that is not available at order time
+        - A target that can be reconstructed from a feature
+        - An evaluation split that lets the future into training
+        - A metric that does not support the claim made about it
+        - An assumption in the decision engine that does not hold
+        - Something else
+    validations:
+      required: true
+
+  - type: input
+    id: location
+    attributes:
+      label: Where
+      description: "File and line, or the document and section."
+      placeholder: "src/chainsight/features.py:84, or docs/results.md, table 2"
+    validations:
+      required: true
+
+  - type: textarea
+    id: argument
+    attributes:
+      label: The argument
+      description: >-
+        Why the current code or claim is wrong. If you can show it — a query, a correlation,
+        a two-line script — show it.
+    validations:
+      required: true
+
+  - type: textarea
+    id: fix
+    attributes:
+      label: What it should be instead
