@@ -24,6 +24,17 @@ ORDER_VALUE = "Order Item Total"
 #: The column the time-aware split orders on.
 ORDER_DATE = "order date (DateOrders)"
 
+#: Stored as float32 upstream, so 0.03 arrives as 0.029999999. Rounded at ingest.
+DISCOUNT_RATE = "Order Item Discount Rate"
+
+#: A leak, and dropped as one. Named here because `ingest` may filter on it before the
+#: drop, and `leakage.py` trains with it on purpose.
+DELIVERY_STATUS = "Delivery Status"
+
+#: The 7,754 rows where the label is 0 because the shipment never went, not because it
+#: arrived on time.
+CANCELLED_STATUS = "Shipping canceled"
+
 #: `pandas.read_csv` needs this. The file is not UTF-8; see `data/dataset_manifest.json`.
 ENCODING = "latin-1"
 

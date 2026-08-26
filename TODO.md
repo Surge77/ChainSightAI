@@ -5,11 +5,15 @@ Things known to be missing, so a cold start does not rediscover them. Closed ite
 
 ## Next
 
-- [ ] **Phase 3** — `ingest.py`: read the latin-1 file, drop everything the contract marks
-      dropped, parse the dates, and normalise dtypes.
+- [ ] **Phase 4** — `features.py` and `encoding.py`: one implementation shared by training
+      and serving, with a test asserting both produce identical columns in identical order.
 
-## Questions the audit raised and did not settle
+## Questions raised and not settled
 
+- [ ] Whether to train with `exclude_cancelled=True`. The 7,754 cancelled shipments are
+      labelled not-late because they never went, which is label noise rather than an
+      on-time delivery. Excluding them moves the late rate 0.5483 -> 0.5729. Measure the
+      effect on held-out scores in phase 7 and then choose, rather than choosing now.
 - [ ] First Class with any payment type other than TRANSFER is late on all 19,997 rows.
       That is a fingerprint of synthetic generation. Decide whether the model card should
       cap its claims accordingly, or whether the subgroup should be reported separately.

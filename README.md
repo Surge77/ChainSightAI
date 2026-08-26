@@ -77,7 +77,8 @@ is. Every phase is a branch, a pull request and a tag.
 | 0 — scaffold, docs, CI, taught-set gate | done (`v0.1.0`) |
 | 1 — data acquisition | done |
 | 2 — column contract, data audit, committed sample | done |
-| 3–5 — ingest, features, split, baselines | next |
+| 3 — ingest | done |
+| 4–5 — features, split, baselines | next |
 | 6 — the leakage demonstration | pending |
 | 7–11 — models, decision engine, explanations, CLI | pending |
 | 12–14 — FastAPI service, operator pages, control tower | pending |
