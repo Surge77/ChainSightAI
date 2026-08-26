@@ -79,8 +79,8 @@ is. Every phase is a branch, a pull request and a tag.
 | 2 — column contract, data audit, committed sample | done |
 | 3 — ingest | done |
 | 4 — features and encoding | done |
-| 5 — time-aware split and baselines | next |
-| 6 — the leakage demonstration | pending |
+| 5 — time-aware split and baselines | done (`v0.2.0`) |
+| 6 — the leakage demonstration | next |
 | 7–11 — models, decision engine, explanations, CLI | pending |
 | 12–14 — FastAPI service, operator pages, control tower | pending |
 | 15 — model card, ADRs, release | pending |
@@ -115,7 +115,7 @@ exist.
 |---|---|---|
 | [`docs/data_audit.md`](docs/data_audit.md) | All 53 columns: available at order time, or not, and why | **done** |
 | `docs/leakage.md` | The two leaks, and what removing them costs | phase 6 |
-| `docs/results.md` | Baselines first, then every model against them | phase 5 |
+| [`docs/results.md`](docs/results.md) | Baselines first, then every model against them | **done** |
 | `docs/decision_engine.md` | The cost model, and every assumption in it | phase 9 |
 | `docs/model_card.md` | Intended use, known weaknesses, what this must not be used for | phase 15 |
 | `docs/architecture.md` | How the pieces fit | phase 15 |

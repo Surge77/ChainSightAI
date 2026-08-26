@@ -15,6 +15,7 @@ from check_taught import (
     TAUGHT_NOTEBOOK,
     inspect_file,
     main,
+    run,
 )
 
 DEFAULT = TAUGHT_NOTEBOOK | TAUGHT_CHEATSHEET
@@ -100,7 +101,19 @@ def test_ignores_imports_that_have_nothing_to_do_with_modelling(tmp_path: Path) 
 def test_the_repository_itself_is_clean() -> None:
     """The gate runs against `src/` in CI; keep it green here too."""
     assert main([]) == 0
-    assert main(["--strict"]) == 0
+
+
+def test_whatever_strict_mode_rejects_is_only_ever_the_cheatsheet_tier() -> None:
+    """`--strict` is a record, not a pass/fail, and this is the line it must not cross.
+
+    Leaning on a name that was revised but never executed in a notebook is a small stretch,
+    and the strict run exists to say how often. Reaching outside the curriculum altogether
+    is not a stretch, it is a different project, and it fails here as well as in the
+    default run.
+    """
+    reasons = {finding.reason for finding in run(strict=True)}
+
+    assert reasons <= {"CHEATSHEET TIER, REJECTED BY --strict"}
 
 
 def test_finding_renders_a_clickable_location(tmp_path: Path) -> None:
