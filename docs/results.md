@@ -198,6 +198,71 @@ is the product, and in the 0.6–0.9 range the ranking is wrong. Nothing here co
 `CalibratedClassifierCV` is outside the curriculum — so it is recorded, it goes in the model
 card, and `TODO.md` carries a hand-rolled isotonic fit as follow-up work.
 
+## The margin model, and why there is no margin model
+
+| model | mae | rmse | r2 | fit (s) |
+|---|---|---|---|---|
+| linear regression | 0.2927 | 0.4659 | −0.0001 | 0.1 |
+| ridge | 0.2927 | 0.4659 | −0.0001 | 0.1 |
+| baseline: mean margin | 0.2930 | 0.4659 | −0.0001 | 0.0 |
+| lasso | 0.2930 | 0.4659 | −0.0001 | 0.1 |
+| polynomial linear | 0.3020 | 0.4701 | −0.0184 | 2.8 |
+
+Linear regression and ridge "beat" the baseline by **0.0003 MAE**. That is not a model, it
+is rounding. Lasso ties it exactly — L1 drove every coefficient to zero and reinvented the
+mean, which is the cleanest possible demonstration of the revision notes' line about L1
+being feature selection. Degree-2 polynomial expansion, 300 features, is measurably *worse*
+than doing nothing.
+
+### Is that the model class, or the data?
+
+Two explanations, opposite next steps. `ceiling.py` settles it by building a predictor that
+**cheats**: for a given column it predicts each group's mean taken from the test set
+itself. No honest model restricted to that column can beat it.
+
+| columns | groups | rows per group | oracle r2 | meaningful |
+|---|---:|---:|---:|---|
+| Market | 2 | 12,184 | 0.0000 | yes |
+| Shipping Mode | 4 | 6,092 | 0.0001 | yes |
+| Order Item Discount Rate | 18 | 1,354 | 0.0008 | yes |
+| Category Name | 45 | 542 | 0.0024 | yes |
+| Order Country | 42 | 580 | 0.0025 | yes |
+| Product Name | 73 | 334 | 0.0036 | yes |
+| all thirteen combined | 23,707 | **1.03** | 0.9696 | **no — memorising rows** |
+
+**It is the data.** A predictor allowed to cheat reaches R² 0.0036. Nothing honest can do
+better, so no model of any class — linear, tree, boosted, or otherwise — will predict
+`Order Item Profit Ratio` from at-order features in this dataset. It sits at about 0.12
+with a within-category standard deviation of roughly 0.46: the between-category variation
+is a rounding error against the noise.
+
+The last row is why `rows per group` is printed beside every score. Combine enough columns
+and every order lands in a group of its own, at which point the oracle scores 0.97 by
+reading the answers. That is not a ceiling and the table says so rather than leaving a
+reader to notice.
+
+### A number I over-read, corrected
+
+`docs/data_audit.md` and the prediction section above both cite a "0.1385 spread" in
+`Category Name` as the place the margin model's signal lives. That figure is
+max−min across 50 category means, several of them tiny. It is not signal. The largest
+categories all sit within 0.008 of each other, and the oracle above puts the honest number
+at 0.0024. The audit's claim was wrong and this supersedes it.
+
+### What the product does instead
+
+Expected profit stays in the application, because the operator needs it, but it is computed
+rather than predicted:
+
+```
+expected profit  =  mean training margin (0.1206)  x  Order Item Total
+```
+
+`Order Item Total` is known exactly at order time. So the value at risk on an order is
+known to within the noise of a quantity nothing can predict, and the decision engine ranks
+on a number that is measured rather than modelled. The UI must present it as an estimate
+with that stated, not as a model output.
+
 ## Where this leaves the project
 
 The honest summary is that **on this dataset, with these features, the delivery-risk problem
