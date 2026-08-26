@@ -61,8 +61,11 @@ The same audit found a second leak on the regression side that is easy to miss:
 ratio** and multiplies it by the order total, which is already known when the order is
 placed.
 
-Full column-by-column reasoning lands in `docs/data_audit.md` (phase 2) and
-`docs/leakage.md` (phase 6).
+Full column-by-column reasoning, with every equality measured on all 180,519 rows, is in
+[`docs/data_audit.md`](docs/data_audit.md). The short version: 16 of 53 columns survive,
+and one of them — `Shipping Mode` — carries a 57-point spread in late rate while `Market`
+carries 0.9. A single `if` on shipping mode scores 0.6953 accuracy, so that, and not the
+0.5483 majority class, is the number every model here is measured against.
 
 ## Status
 
@@ -72,8 +75,9 @@ is. Every phase is a branch, a pull request and a tag.
 | Phase | State |
 |---|---|
 | 0 — scaffold, docs, CI, taught-set gate | done (`v0.1.0`) |
-| 1 — data acquisition and committed sample | next |
-| 2–5 — audit, ingest, features, split, baselines | pending |
+| 1 — data acquisition | done |
+| 2 — column contract, data audit, committed sample | done |
+| 3–5 — ingest, features, split, baselines | next |
 | 6 — the leakage demonstration | pending |
 | 7–11 — models, decision engine, explanations, CLI | pending |
 | 12–14 — FastAPI service, operator pages, control tower | pending |
@@ -107,7 +111,7 @@ exist.
 
 | | | |
 |---|---|---|
-| `docs/data_audit.md` | All 53 columns: available at order time, or not, and why | phase 2 |
+| [`docs/data_audit.md`](docs/data_audit.md) | All 53 columns: available at order time, or not, and why | **done** |
 | `docs/leakage.md` | The two leaks, and what removing them costs | phase 6 |
 | `docs/results.md` | Baselines first, then every model against them | phase 5 |
 | `docs/decision_engine.md` | The cost model, and every assumption in it | phase 9 |
