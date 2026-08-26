@@ -51,15 +51,26 @@ spells the answer out in English. Published notebooks on this dataset report acc
 around 0.98. That number is the leak, not the model.
 
 ChainSight removes every column that does not exist at the moment an order is placed, and
-`python -m chainsight leakage` trains the same model twice — once with the post-dispatch
-columns, once without — and prints both numbers side by side. The honest number is far
-lower. Demonstrating exactly how much lower, and why, is the point of the project.
+trains the same model twice to show what that costs. Measured, not asserted:
 
-The same audit found a second leak on the regression side that is easy to miss:
-`Order Profit Per Order` is `Order Item Total × Order Item Profit Ratio`, and
-`Benefit per order` is a near-duplicate of the target. So ChainSight predicts the **margin
-ratio** and multiplies it by the order total, which is already known when the order is
-placed.
+| | accuracy |
+|---|---|
+| with the post-dispatch columns | **1.0000** |
+| honest | 0.6956 |
+
+Not 0.98 — a depth-5 tree needs one split on `Delivery Status` and it is done. Thirty
+accuracy points is the price of asking the question at the moment you would actually need
+the answer.
+
+The audit found a second leak on the regression side that is usually missed, and it is the
+more interesting one. `Order Item Profit Ratio` is exactly
+`Order Profit Per Order / Order Item Total`, and the divisor is known at order time. Give a
+linear model the profit column alone and it reaches R² 0.1938 — a mediocre-looking model
+nobody would investigate. Give it the quotient too and it reaches **1.0000**. The leak
+hides because `LinearRegression` cannot divide.
+
+So ChainSight predicts the **margin ratio** and multiplies it by the order total, which is
+already in hand.
 
 Full column-by-column reasoning, with every equality measured on all 180,519 rows, is in
 [`docs/data_audit.md`](docs/data_audit.md). The short version: 16 of 53 columns survive,
@@ -80,8 +91,9 @@ is. Every phase is a branch, a pull request and a tag.
 | 3 — ingest | done |
 | 4 — features and encoding | done |
 | 5 — time-aware split and baselines | done (`v0.2.0`) |
-| 6 — the leakage demonstration | next |
-| 7–11 — models, decision engine, explanations, CLI | pending |
+| 6 — the leakage demonstration | done |
+| 7 — the classification registry | next |
+| 8–11 — margin model, decision engine, explanations, CLI | pending |
 | 12–14 — FastAPI service, operator pages, control tower | pending |
 | 15 — model card, ADRs, release | pending |
 
@@ -114,7 +126,7 @@ exist.
 | | | |
 |---|---|---|
 | [`docs/data_audit.md`](docs/data_audit.md) | All 53 columns: available at order time, or not, and why | **done** |
-| `docs/leakage.md` | The two leaks, and what removing them costs | phase 6 |
+| [`docs/leakage.md`](docs/leakage.md) | The two leaks, and what removing them costs | **done** |
 | [`docs/results.md`](docs/results.md) | Baselines first, then every model against them | **done** |
 | `docs/decision_engine.md` | The cost model, and every assumption in it | phase 9 |
 | `docs/model_card.md` | Intended use, known weaknesses, what this must not be used for | phase 15 |
