@@ -23,7 +23,7 @@ from dataclasses import dataclass
 import pandas as pd
 
 from chainsight import schema
-from chainsight.encoding import CategoryCodes
+from chainsight.encoding import CategoryCodes, Encoding, OneHotColumns
 
 #: Categorical columns, encoded to integer codes. Every one is known at order time.
 CATEGORICAL: tuple[str, ...] = (
@@ -79,36 +79,49 @@ def derive(frame: pd.DataFrame) -> pd.DataFrame:
 
 @dataclass(frozen=True)
 class FeatureSpace:
-    """A fitted feature builder: the category mappings, and the column order.
+    """A fitted feature builder: the category encoder, and the column order.
 
     The column order is stored rather than recomputed. scikit-learn estimators index
     features positionally once fitted, so a frame with the right columns in the wrong
     order predicts confidently and wrongly, with nothing to see in a traceback.
     """
 
-    codes: CategoryCodes
+    codes: CategoryCodes | OneHotColumns
     columns: tuple[str, ...]
+    encoding: Encoding = "codes"
 
     @classmethod
-    def fit(cls, frame: pd.DataFrame) -> FeatureSpace:
-        """Learn the category mappings from this frame, which must be the training slice only."""
-        codes = CategoryCodes.fit(frame, list(CATEGORICAL))
-        columns = tuple(CATEGORICAL) + tuple(NUMERIC) + tuple(derive(frame).columns)
-        return cls(codes=codes, columns=columns)
+    def fit(cls, frame: pd.DataFrame, *, encoding: Encoding = "codes") -> FeatureSpace:
+        """Learn the encoding from this frame, which must be the training slice only.
+
+        `codes` keeps the project inside the course material and gives every category an
+        arbitrary integer that linear models read as a quantity. `one-hot` costs a wider
+        matrix and buys a calibration gap of 0.074 in place of 0.334.
+        """
+        codes: CategoryCodes | OneHotColumns = (
+            CategoryCodes.fit(frame, list(CATEGORICAL))
+            if encoding == "codes"
+            else OneHotColumns.fit(frame, list(CATEGORICAL))
+        )
+        # The column list is read off a real transform rather than assembled by hand, so the
+        # two can never disagree about what the encoder produced.
+        built = _assemble(codes, frame)
+        return cls(codes=codes, columns=tuple(built.columns), encoding=encoding)
 
     def transform(self, frame: pd.DataFrame) -> pd.DataFrame:
         """The numeric feature matrix, in the fitted column order."""
-        built = pd.concat(
-            [self.codes.transform(frame), frame.loc[:, list(NUMERIC)], derive(frame)],
-            axis=1,
-        )
-        return built.loc[:, list(self.columns)]
+        return _assemble(self.codes, frame).loc[:, list(self.columns)]
 
     def fit_transform(self, _frame: pd.DataFrame) -> pd.DataFrame:
         raise NotImplementedError(
             "fit on the training slice and transform the others separately. A combined call "
             "is the shape of the mistake this class exists to prevent."
         )
+
+
+def _assemble(codes: CategoryCodes | OneHotColumns, frame: pd.DataFrame) -> pd.DataFrame:
+    """Encoded categoricals, numeric passthroughs and derived columns, in that order."""
+    return pd.concat([codes.transform(frame), frame.loc[:, list(NUMERIC)], derive(frame)], axis=1)
 
 
 #: The at-order fields an operator supplies. The serving path builds a frame from these and

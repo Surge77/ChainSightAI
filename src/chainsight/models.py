@@ -22,10 +22,12 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
+from sklearn.calibration import CalibratedClassifierCV
 from sklearn.ensemble import (
     AdaBoostClassifier,
     BaggingClassifier,
     GradientBoostingClassifier,
+    HistGradientBoostingClassifier,
     RandomForestClassifier,
     VotingClassifier,
 )
@@ -36,6 +38,8 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
+
+from chainsight.encoding import Encoding
 
 RANDOM_STATE = 42
 
@@ -75,6 +79,9 @@ class Candidate:
     grid: dict[str, list[Any]] = field(default_factory=dict)
     max_rows: int | None = None
     note: str = ""
+    #: Which feature space this candidate is fitted on. `codes` is the course's
+    #: `LabelEncoder`; `one-hot` is declared in `scripts/check_taught.py`.
+    encoding: Encoding = "codes"
 
 
 CLASSIFIERS: tuple[Candidate, ...] = (
@@ -147,13 +154,53 @@ CLASSIFIERS: tuple[Candidate, ...] = (
 )
 
 
+#: Candidates that reach outside the course material. Every name they use is declared in
+#: `scripts/check_taught.py` with the measurement that justified it, and they are listed
+#: separately here so the results table can say which side of the line each row sits on.
+DECLARED_CLASSIFIERS: tuple[Candidate, ...] = (
+    Candidate(
+        name="one-hot logistic",
+        build=lambda: _scaled(_logistic()),
+        encoding="one-hot",
+        note="the taught logistic, over a one-hot feature space instead of integer codes",
+    ),
+    Candidate(
+        name="one-hot random forest",
+        build=lambda: RandomForestClassifier(
+            n_estimators=200, max_depth=12, random_state=RANDOM_STATE, n_jobs=-1
+        ),
+        encoding="one-hot",
+        note="best measured ranking: 0.7518 ROC-AUC against the rule baseline's 0.7341",
+    ),
+    Candidate(
+        name="hist gradient boosting",
+        build=lambda: HistGradientBoostingClassifier(random_state=RANDOM_STATE, max_iter=300),
+        note="the strongest learner available, included to test whether the ceiling is real",
+    ),
+    Candidate(
+        name="calibrated hist gradient boosting",
+        build=lambda: CalibratedClassifierCV(
+            HistGradientBoostingClassifier(random_state=RANDOM_STATE, max_iter=300),
+            method="isotonic",
+            cv=3,
+        ),
+        note="isotonic recalibration, because the probability ordering was inverted",
+    ),
+)
+
+
 def by_name(name: str) -> Candidate:
-    for candidate in CLASSIFIERS:
+    for candidate in (*CLASSIFIERS, *DECLARED_CLASSIFIERS):
         if candidate.name == name:
             return candidate
-    available = ", ".join(candidate.name for candidate in CLASSIFIERS)
+    available = ", ".join(c.name for c in (*CLASSIFIERS, *DECLARED_CLASSIFIERS))
     raise KeyError(f"no classifier called {name!r}. Available: {available}")
 
 
 def names() -> list[str]:
-    return [candidate.name for candidate in CLASSIFIERS]
+    return [candidate.name for candidate in (*CLASSIFIERS, *DECLARED_CLASSIFIERS)]
+
+
+def is_declared(name: str) -> bool:
+    """True when this candidate reaches outside the course material."""
+    return any(candidate.name == name for candidate in DECLARED_CLASSIFIERS)

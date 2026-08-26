@@ -77,7 +77,17 @@ All notable changes to this project are recorded here. The format follows
   reports rows-per-group beside every score and marks a ceiling as memorising rather than
   meaningful once the groups get finer than five rows each.
 
+- `evaluate.ranking_scores`, `encoding.OneHotColumns`, and four declared classifiers. On
+  average precision the models beat the rule baseline by 0.069 - 0.8215 against 0.7528 -
+  which accuracy and F1 had hidden entirely. One-hot encoding also repairs the calibration
+  defect: the worst gap falls from 0.334 to 0.122 and the probability ordering, previously
+  inverted between 0.6 and 0.9, is now monotone.
+
 ### Changed
+- `scripts/check_taught.py` now labels rather than blocks. A third tier, `DECLARED`, holds
+  names from outside the course material, each carrying the measurement that justified it,
+  and `--report` prints how much of `src/` rests on each tier. 24 of 29 scikit-learn names
+  still come from the course material.
 - CI now runs `scripts/render_audit.py --check`, and uses `actions/checkout@v5` and
   `actions/setup-python@v6` — the v4/v5 pair is pinned to a deprecated Node runtime.
 
