@@ -33,6 +33,14 @@ All notable changes to this project are recorded here. The format follows
   not-late because the shipment never went. Off by default, so the frame matches the task
   as published; excluding them moves the late rate from 0.5483 to 0.5729.
 
+- `src/chainsight/encoding.py`: `LabelEncoder` category codes with an `UNSEEN` fallback.
+  Fitting on orders before 2017 and applying to 2017 onward leaves 19.56% of rows with an
+  unseen `Product Name`, 17.38% unseen `Category Name` and 8.59% unseen `Department Name` —
+  the catalogue turns over, and `LabelEncoder.transform` would raise on one row in five.
+- `src/chainsight/features.py`: one feature builder, 23 columns, used by training and by
+  serving. A test asserts a single operator order produces the same columns in the same
+  order *and the same values* as that row did in training.
+
 ### Changed
 - CI now runs `scripts/render_audit.py --check`, and uses `actions/checkout@v5` and
   `actions/setup-python@v6` — the v4/v5 pair is pinned to a deprecated Node runtime.

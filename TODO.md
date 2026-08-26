@@ -5,11 +5,16 @@ Things known to be missing, so a cold start does not rediscover them. Closed ite
 
 ## Next
 
-- [ ] **Phase 4** — `features.py` and `encoding.py`: one implementation shared by training
-      and serving, with a test asserting both produce identical columns in identical order.
+- [ ] **Phase 5** — `split.py`, the time-aware split, and the two baselines every model is
+      measured against: the shipping-mode rule at 0.6953 accuracy, and the mean margin at
+      0.2941 MAE.
 
 ## Questions raised and not settled
 
+- [ ] Product identity may be worth dropping entirely. Fitted before 2017 and applied
+      after, `Product Name` is unseen on 19.56% of rows and `Category Name` on 17.38%.
+      A feature that is absent for a fifth of the future is a liability; measure whether
+      keeping it beats dropping it before assuming either.
 - [ ] Whether to train with `exclude_cancelled=True`. The 7,754 cancelled shipments are
       labelled not-late because they never went, which is label noise rather than an
       on-time delivery. Excluding them moves the late rate 0.5483 -> 0.5729. Measure the
