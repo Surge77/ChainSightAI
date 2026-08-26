@@ -24,6 +24,15 @@ All notable changes to this project are recorded here. The format follows
   stratified by shipping mode and year, with the nine personal-data columns removed using
   the contract's own list rather than one retyped in the script.
 
+- `src/chainsight/ingest.py`: the single door into the data. Reads the latin-1 source,
+  refuses a frame that is missing a feature or carries a column absent from the contract,
+  drops the 35 columns the contract rejects, parses the order date and rounds the
+  publisher's float32 discount rate. Verified end to end on all 180,519 rows: 18 columns
+  out, late rate 0.5483, 18.71% loss-making.
+- `ingest(..., exclude_cancelled=True)`: an explicit flag for the 7,754 orders labelled
+  not-late because the shipment never went. Off by default, so the frame matches the task
+  as published; excluding them moves the late rate from 0.5483 to 0.5729.
+
 ### Changed
 - CI now runs `scripts/render_audit.py --check`, and uses `actions/checkout@v5` and
   `actions/setup-python@v6` — the v4/v5 pair is pinned to a deprecated Node runtime.
