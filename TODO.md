@@ -5,11 +5,19 @@ Things known to be missing, so a cold start does not rediscover them. Closed ite
 
 ## Next
 
-- [ ] **Phase 2** — `docs/data_audit.md` over all 53 columns, `src/chainsight/schema.py` as
-      its executable twin, and `scripts/make_sample.py` producing the committed slice the
-      tests run on. The sample moved here from phase 1 on purpose: it must be cut with the
-      schema's own drop-list so it is post-redaction by construction rather than by
-      inspection, and the schema did not exist yet.
+- [ ] **Phase 3** — `ingest.py`: read the latin-1 file, drop everything the contract marks
+      dropped, parse the dates, and normalise dtypes.
+
+## Questions the audit raised and did not settle
+
+- [ ] First Class with any payment type other than TRANSFER is late on all 19,997 rows.
+      That is a fingerprint of synthetic generation. Decide whether the model card should
+      cap its claims accordingly, or whether the subgroup should be reported separately.
+- [ ] `Order Country` has 164 levels under LabelEncoder. Measure what that costs the linear
+      models before assuming the trade-off named in the audit is the right one.
+- [ ] The 500-row sample's late rate is 0.5800 against the population's 0.5483, from
+      rounding in the per-cell allocation. Harmless for tests; do not quote it as a
+      dataset statistic anywhere.
 
 ## Security, before this faces anything but localhost
 

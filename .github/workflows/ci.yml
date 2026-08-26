@@ -23,9 +23,9 @@ jobs:
         python-version: ["3.11", "3.12"]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
@@ -56,6 +56,12 @@ jobs:
       - name: Curriculum gate (strict, informational)
         continue-on-error: true
         run: python scripts/check_taught.py --strict
+
+      # `docs/data_audit.md` is generated from `src/chainsight/columns.py`. A stale copy is a
+      # document that describes a drop-list the code stopped believing, which is worse than
+      # no document at all.
+      - name: Audit document matches the column contract
+        run: python scripts/render_audit.py --check
 
       - name: Upload coverage
         if: matrix.python-version == '3.11'
