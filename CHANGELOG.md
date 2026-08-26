@@ -68,6 +68,15 @@ All notable changes to this project are recorded here. The format follows
   a calibration plot. The sweep names operating points and says how many orders each flags;
   the reliability table bins predicted probability against observed rate.
 
+- `src/chainsight/regressors.py` and `compare.run_margin`: the four taught regressors on the
+  margin target. None of them separates from the mean baseline; lasso ties it exactly, having
+  driven every coefficient to zero.
+- `src/chainsight/ceiling.py`: an oracle that cheats, to distinguish "this model class cannot
+  reach the signal" from "there is no signal". On `Order Item Profit Ratio` the cheating
+  predictor reaches R-squared 0.0036, so no model of any class can predict it here. The tool
+  reports rows-per-group beside every score and marks a ceiling as memorising rather than
+  meaningful once the groups get finer than five rows each.
+
 ### Changed
 - CI now runs `scripts/render_audit.py --check`, and uses `actions/checkout@v5` and
   `actions/setup-python@v6` — the v4/v5 pair is pinned to a deprecated Node runtime.

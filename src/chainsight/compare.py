@@ -16,7 +16,16 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
-from chainsight import baselines, evaluate, features, models, schema, split, tuning
+from chainsight import (
+    baselines,
+    evaluate,
+    features,
+    models,
+    regressors,
+    schema,
+    split,
+    tuning,
+)
 
 
 @dataclass(frozen=True)
@@ -97,6 +106,77 @@ def run(
             )
         )
     return results
+
+
+def run_margin(frame: pd.DataFrame, *, only: list[str] | None = None) -> list[Result]:
+    """The same shape of comparison for the margin target, against the mean baseline.
+
+    `tuning.tune` scores folds on F1, which is meaningless for a regressor, so the margin
+    candidates are fitted directly. They have small grids or none, and the finding recorded
+    in `docs/results.md` is that none of them separates from the baseline at all -- tuning
+    harder would be tuning something that is not there.
+    """
+    parts = split.by_date(frame)
+    space = features.FeatureSpace.fit(parts.train)
+
+    X_train, X_test = space.transform(parts.train), space.transform(parts.test)
+    Y_train = parts.train[schema.MARGIN_TARGET]
+    Y_test = parts.test[schema.MARGIN_TARGET]
+
+    results = [
+        Result(
+            name="baseline: mean margin",
+            scores=evaluate.regression_scores(
+                Y_test, baselines.MeanValue.fit(parts.train).predict(parts.test)
+            ),
+            parameters={},
+            seconds=0.0,
+            rows_used=len(parts.train),
+            rows_available=len(parts.train),
+        )
+    ]
+
+    wanted = regressors.REGRESSORS if only is None else [regressors.by_name(n) for n in only]
+    for candidate in wanted:
+        started = time.perf_counter()
+        estimator = candidate.build()
+        estimator.fit(X_train, Y_train)
+        results.append(
+            Result(
+                name=candidate.name,
+                scores=evaluate.regression_scores(Y_test, estimator.predict(X_test)),
+                parameters={},
+                seconds=time.perf_counter() - started,
+                rows_used=len(X_train),
+                rows_available=len(X_train),
+            )
+        )
+    return results
+
+
+def margin_table(results: list[Result]) -> str:
+    """Sorted by MAE, lowest first, because MAE is the one that can be said out loud."""
+    frame = pd.DataFrame(
+        [
+            {
+                "model": result.name,
+                **{key: round(value, 4) for key, value in result.scores.items()},
+                "fit (s)": round(result.seconds, 1),
+            }
+            for result in results
+        ]
+    ).sort_values("mae")
+    return evaluate.as_markdown(frame.set_index("model"), corner="model")
+
+
+def beats_the_mean(results: list[Result]) -> list[str]:
+    """Names of margin models with a lower MAE than predicting the training mean."""
+    bar = next(r.scores["mae"] for r in results if r.name == "baseline: mean margin")
+    return [
+        result.name
+        for result in results
+        if not result.name.startswith("baseline: ") and result.scores["mae"] < bar
+    ]
 
 
 def _baseline_result(
