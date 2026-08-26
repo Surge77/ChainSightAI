@@ -41,6 +41,17 @@ All notable changes to this project are recorded here. The format follows
   serving. A test asserts a single operator order produces the same columns in the same
   order *and the same values* as that row did in training.
 
+- `src/chainsight/split.py`: a chronological split (train 2015-2016, validate 2017 H1, test
+  2017 H2 onward) alongside a labelled shuffled split kept only for comparison.
+- `src/chainsight/baselines.py`: majority class, per-shipping-mode rate, and mean margin.
+- `src/chainsight/evaluate.py`: accuracy, precision, recall and F1 -- the last three derived
+  from the confusion matrix rather than imported, which matches the formulas in the revision
+  notes and makes a model that predicts no positives score zero instead of warning.
+- `docs/results.md` and `scripts/report_baselines.py`: the numbers to beat, and the command
+  that regenerates them. On the held-out slice the majority baseline scores 0.5511 accuracy
+  and 0.7106 F1; the one-line shipping-mode rule scores 0.6956 accuracy and 0.6635 F1. A
+  model has to clear both at once. The mean-margin baseline sets MAE at 0.2930.
+
 ### Changed
 - CI now runs `scripts/render_audit.py --check`, and uses `actions/checkout@v5` and
   `actions/setup-python@v6` — the v4/v5 pair is pinned to a deprecated Node runtime.

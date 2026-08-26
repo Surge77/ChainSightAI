@@ -5,9 +5,10 @@ Things known to be missing, so a cold start does not rediscover them. Closed ite
 
 ## Next
 
-- [ ] **Phase 5** — `split.py`, the time-aware split, and the two baselines every model is
-      measured against: the shipping-mode rule at 0.6953 accuracy, and the mean margin at
-      0.2941 MAE.
+- [ ] **Phase 6** — `leakage.py` and `chainsight leakage`: train once with the post-dispatch
+      columns and once without, and print both numbers side by side. Also compare the
+      chronological split against the shuffled one, which the stable late rate across
+      slices suggests will cost almost nothing.
 
 ## Questions raised and not settled
 
