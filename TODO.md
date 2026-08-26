@@ -5,16 +5,25 @@ Things known to be missing, so a cold start does not rediscover them. Closed ite
 
 ## Next
 
-- [ ] **Phase 7** — the classification registry over the taught estimators, `GridSearchCV`
-      on time-ordered folds, and the threshold sweep. The bar is 0.6956 accuracy and
-      0.7106 F1 **at the same time**.
+- [ ] **Phase 8** — the margin regressor on `Order Item Profit Ratio`. Beat MAE 0.2930.
+      Only `LinearRegression`, `Ridge`, `Lasso` and `PolynomialFeatures` are available, so
+      the categorical block carrying the 0.1385 `Category Name` spread is where to look.
 
 ## Questions raised and not settled
 
-- [ ] The honest decision tree scores 0.6956 accuracy, matching the one-line shipping-mode
-      rule to four decimals. It appears to have found that rule and nothing else. Confirm
-      in phase 7 by reading the fitted tree, and say so in the results if true - a model
-      that reproduces a baseline exactly has not earned its complexity.
+- [ ] **The probability ordering is inverted in the middle of the range.** Orders scored
+      0.78 are late 45% of the time; orders scored 0.65 are late 81% of the time. Ranking
+      by predicted risk is the product, so this is a defect rather than a curiosity.
+      `CalibratedClassifierCV` is outside the curriculum; a hand-rolled isotonic or binned
+      recalibration is not, and is worth doing before the decision engine multiplies these
+      numbers by money.
+- [ ] No taught model clears both baselines at any threshold. Decide for the model card
+      whether ChainSight ships the shipping-mode rule as the production model and presents
+      the classifiers as the evidence for that choice - which is currently the honest
+      reading of the table.
+- [ ] The depth-5 tree in the leakage demo scores 0.6956, matching the shipping-mode rule
+      to four decimals; the *tuned* tree scores 0.5972. Read both fitted trees and confirm
+      the first is the rule and the second is overfitting.
 - [ ] Product identity may be worth dropping entirely. Fitted before 2017 and applied
       after, `Product Name` is unseen on 19.56% of rows and `Category Name` on 17.38%.
       A feature that is absent for a fifth of the future is a liability; measure whether
