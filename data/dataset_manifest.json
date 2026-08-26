@@ -1,0 +1,31 @@
+{
+  "name": "DataCo Smart Supply Chain for Big Data Analysis",
+  "kaggle_slug": "shashwatwork/dataco-smart-supply-chain-for-big-data-analysis",
+  "url": "https://www.kaggle.com/datasets/shashwatwork/dataco-smart-supply-chain-for-big-data-analysis",
+  "license": "CC0-1.0",
+  "retrieved": "2026-08-26",
+  "encoding": "latin-1",
+  "note": "Not UTF-8. Reading this file with the default encoding raises UnicodeDecodeError at byte 1709.",
+  "files": {
+    "DataCoSupplyChainDataset.csv": {
+      "sha256": "fa6d022ed437155e1a2f0378710602848703c8a7f203f7ff5d77805bf8480aa6",
+      "bytes": 95910149,
+      "rows": 180519,
+      "columns": 53,
+      "required": true
+    },
+    "DescriptionDataCoSupplyChain.csv": {
+      "sha256": "9828e34669bd6d77e3b4463364cc44a5d52446b5e246fc258758cfe592566c4b",
+      "bytes": 3444,
+      "required": false,
+      "note": "The publisher's own column glossary. Kept because docs/data_audit.md argues with it."
+    }
+  },
+  "discarded": {
+    "tokenized_access_logs.csv": "A 95 MB clickstream log shipped in the same archive. It shares no key with the order table and answers no question this project asks, so fetch_data.py deletes it rather than leaving 95 MB of confusion in data/raw/."
+  },
+  "order_date_range": ["2015-01-01T00:00:00", "2018-01-31T23:38:00"],
+  "target_base_rate": {
+    "Late_delivery_risk": 0.5483
+  }
+}

@@ -5,8 +5,11 @@ Things known to be missing, so a cold start does not rediscover them. Closed ite
 
 ## Next
 
-- [ ] **Phase 1** — `scripts/fetch_data.py`, the DataCo download, the recorded SHA-256, and
-      the committed 500-row sample.
+- [ ] **Phase 2** — `docs/data_audit.md` over all 53 columns, `src/chainsight/schema.py` as
+      its executable twin, and `scripts/make_sample.py` producing the committed slice the
+      tests run on. The sample moved here from phase 1 on purpose: it must be cut with the
+      schema's own drop-list so it is post-redaction by construction rather than by
+      inspection, and the schema did not exist yet.
 
 ## Security, before this faces anything but localhost
 

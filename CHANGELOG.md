@@ -7,7 +7,11 @@ All notable changes to this project are recorded here. The format follows
 ## [Unreleased]
 
 ### Added
-- Nothing yet.
+- `scripts/fetch_data.py` and `data/dataset_manifest.json`: the dataset is downloaded into a
+  gitignored directory and checked against a recorded SHA-256, row count and column count.
+  The manifest also records that the file is latin-1 rather than UTF-8, that the archive's
+  95 MB clickstream table is discarded because it shares no key with the order table, and
+  that the licence is CC0-1.0.
 
 ## [0.1.0] — 2026-08-26
 
