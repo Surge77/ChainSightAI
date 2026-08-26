@@ -78,7 +78,8 @@ is. Every phase is a branch, a pull request and a tag.
 | 1 — data acquisition | done |
 | 2 — column contract, data audit, committed sample | done |
 | 3 — ingest | done |
-| 4–5 — features, split, baselines | next |
+| 4 — features and encoding | done |
+| 5 — time-aware split and baselines | next |
 | 6 — the leakage demonstration | pending |
 | 7–11 — models, decision engine, explanations, CLI | pending |
 | 12–14 — FastAPI service, operator pages, control tower | pending |
