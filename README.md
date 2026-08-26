@@ -92,8 +92,9 @@ is. Every phase is a branch, a pull request and a tag.
 | 4 — features and encoding | done |
 | 5 — time-aware split and baselines | done (`v0.2.0`) |
 | 6 — the leakage demonstration | done |
-| 7 — the classification registry | next |
-| 8–11 — margin model, decision engine, explanations, CLI | pending |
+| 7 — the classification registry | done (`v0.3.0`) |
+| 8 — the margin model | next |
+| 9–11 — decision engine, explanations, CLI | pending |
 | 12–14 — FastAPI service, operator pages, control tower | pending |
 | 15 — model card, ADRs, release | pending |
 

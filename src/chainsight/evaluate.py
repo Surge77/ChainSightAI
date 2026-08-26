@@ -80,6 +80,48 @@ def regression_scores(Y_true: pd.Series, Y_pred: np.ndarray | pd.Series) -> dict
     }
 
 
+def threshold_sweep(
+    Y_true: pd.Series,
+    probabilities: np.ndarray,
+    *,
+    steps: tuple[float, ...] = (0.2, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.7, 0.8),
+) -> pd.DataFrame:
+    """Precision, recall, F1 and accuracy at each threshold, and how many orders it flags.
+
+    This is what stands in for a ROC curve, which is not in the curriculum. It is arguably
+    the more useful object anyway: a curve integrates over every threshold including the
+    ones nobody would ship, while this table names the operating points and says what each
+    one costs in orders flagged. The decision engine picks a row from it.
+    """
+    rows = []
+    for threshold in steps:
+        predicted = (probabilities >= threshold).astype("int64")
+        scores = classification_scores(Y_true, predicted)
+        rows.append({"threshold": threshold, **scores, "flagged": int(predicted.sum())})
+    return pd.DataFrame(rows).set_index("threshold")
+
+
+def reliability(Y_true: pd.Series, probabilities: np.ndarray, *, bins: int = 10) -> pd.DataFrame:
+    """Predicted probability against observed rate, in deciles of predicted probability.
+
+    A model claiming 0.80 should be late about 80% of the time on the orders it says that
+    about. Nothing here corrects a badly calibrated model -- `CalibratedClassifierCV` is
+    outside the curriculum -- but the decision engine multiplies this probability by money,
+    so a model that is confidently wrong needs to be visible before it is deployed.
+    """
+    frame = pd.DataFrame({"predicted": probabilities, "actual": Y_true.to_numpy()})
+    edges = [index / bins for index in range(bins + 1)]
+    frame["bin"] = pd.cut(frame["predicted"], bins=edges, include_lowest=True)
+
+    grouped = frame.groupby("bin", observed=True).agg(
+        orders=("actual", "size"),
+        mean_predicted=("predicted", "mean"),
+        observed_rate=("actual", "mean"),
+    )
+    grouped["gap"] = grouped["mean_predicted"] - grouped["observed_rate"]
+    return grouped.round(4)
+
+
 def as_table(scores: dict[str, dict[str, float]], *, decimals: int = 4) -> str:
     """A markdown table of named score dicts, for `docs/results.md` and the CLI."""
     return as_markdown(pd.DataFrame(scores).T, corner="model", decimals=decimals)

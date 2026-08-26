@@ -60,6 +60,14 @@ All notable changes to this project are recorded here. The format follows
   because that quotient is the target. A shuffled split, by contrast, scores 0.6923 against
   the chronological 0.6956 - it does not flatter the model on this table at all.
 
+- `src/chainsight/models.py`, `tuning.py` and `compare.py`: ten taught classifiers, grid
+  searched over four expanding time-ordered folds, scored beside the baselines in one table.
+  Row caps for `SVC`, `KNeighborsClassifier` and the bagged logistic are printed in the same
+  row as the score, because a cap changes what the score means.
+- `evaluate.threshold_sweep` and `evaluate.reliability`: what stands in for a ROC curve and
+  a calibration plot. The sweep names operating points and says how many orders each flags;
+  the reliability table bins predicted probability against observed rate.
+
 ### Changed
 - CI now runs `scripts/render_audit.py --check`, and uses `actions/checkout@v5` and
   `actions/setup-python@v6` — the v4/v5 pair is pinned to a deprecated Node runtime.
