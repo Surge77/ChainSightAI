@@ -19,7 +19,7 @@ patches are backported to tags.
 
 ### The dataset contains personal data, and it never enters the repository
 
-The DataCo Smart Supply Chain CSV ships with columns that have no business being in a
+The DataCo Smart Supply Chain CSV ships with nine columns that have no business being in a
 model or in version control:
 
 | Column | Why it is dropped |
@@ -28,6 +28,8 @@ model or in version control:
 | `Customer Email` | Direct identifier. |
 | `Customer Fname`, `Customer Lname` | Direct identifiers. |
 | `Customer Street`, `Customer Zipcode` | Locates a household. `Customer City`/`State`/`Country` are coarse enough to keep. |
+| `Latitude`, `Longitude` | A coordinate pair is a household at street resolution, whatever the column is called. |
+| `Order Zipcode` | Same reason as `Customer Zipcode`, on the delivery side. |
 
 `chainsight.ingest` drops these **at load**, before any other code sees the frame, and
 `tests/test_ingest.py` asserts they are absent from the returned columns. They are not

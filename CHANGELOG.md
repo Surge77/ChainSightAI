@@ -6,6 +6,29 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [1.0.0] - 2026-08-27
+
+The first release. Fifteen phases: the leakage audit, the models, the decision engine, the
+artefacts and registry, the application, and the documents that say what all of it may and
+may not be used for.
+
+**438 tests. `src/` at 100% line and branch coverage. Every phase behind a green CI run on
+Python 3.11 and 3.12.**
+
+### The four findings this release exists to record
+
+1. **The published ~0.98 on this dataset is a leak.** With the post-dispatch columns a
+   depth-5 tree scores 1.0000; without them, 0.6956.
+2. **The profit column leaks too, and quietly.** `Order Profit Per Order / Order Item Total`
+   *is* the regression target. A linear model given the profit column alone reaches R² 0.1938,
+   which reads as a mediocre model rather than an alarm.
+3. **The margin ratio cannot be predicted by anything.** An oracle allowed to cheat reaches
+   R² 0.0036, so the product computes expected profit rather than modelling it.
+4. **Accuracy and F1 were the wrong metrics.** On average precision the models beat the rule
+   baseline by 0.069 — 0.8215 against 0.7528 — which both hid completely.
+
 ### Added
 - `scripts/fetch_data.py` and `data/dataset_manifest.json`: the dataset is downloaded into a
   gitignored directory and checked against a recorded SHA-256, row count and column count.
@@ -129,7 +152,34 @@ All notable changes to this project are recorded here. The format follows
   command because the alternatives — a first-user-becomes-admin rule, or a checkbox on the
   registration form — are a race and a privilege escalation respectively.
 
+- `docs/model_card.md`: intended use, out-of-scope uses, and four measured weaknesses — a
+  0.122 calibration gap, 40% catalogue turnover six months out, the synthetic fingerprint
+  below, and the fact that almost all the signal is one column.
+- `docs/data_card.md`: provenance, licence, the nine personal-data columns and where they go,
+  and the four properties to know before believing any number derived from this dataset.
+- `docs/architecture.md` and `docs/glossary.md`: how the pieces fit, the four boundaries that
+  are load-bearing rather than tidy, and every term this project uses in a specific way.
+- `docs/adr/`: nine architecture decision records, each carrying the measurement that settled
+  the argument — the curriculum gate, the time split, the dropped columns, the margin model
+  that does not exist, selection on ranking, the derived threshold, the JSON registry,
+  server-rendered pages over SQLite, and the absent session-secret default.
+
+### Measured for the model card
+- **Every First Class order paid by anything other than TRANSFER is late — all 20,001 of
+  them, at a rate of exactly 1.0000** across CASH, DEBIT and PAYMENT. A real logistics network
+  does not do this; it is a rule inside whatever generated the data, and it is the single
+  strongest reason not to deploy this artefact against live orders. `TODO.md` had recorded
+  19,997; the corrected figure sits next to the original rather than replacing it.
+- **Catalogue turnover accelerates.** Fitting on 2015–2016, the share of orders with an unseen
+  `Product Name` is 3.40% in 2017 H1 and **40.10%** from 2017 H2. The model has a shelf life
+  of months, not years.
+
 ### Fixed
+- `docs/results.md` cited the training mean margin as 0.1206. The measured figure, and the
+  constant `decision.py` has always used, is **0.1196**.
+- `SECURITY.md` and the data card listed six personal-data columns. The contract drops
+  **nine**: `Latitude`, `Longitude` and `Order Zipcode` were omitted from the prose while
+  being dropped by the code all along.
 - `ingest.read_raw` decoded every CSV as latin-1, which is right for the published 92 MB
   source and wrong for `data/sample_orders.csv`, which `scripts/make_sample.py` writes as
   UTF-8. Reading the slice by path therefore produced `AfganistÃ¡n` — silently, because
@@ -166,5 +216,6 @@ The scaffold, and the rule the rest of the project has to live inside.
   request templates, and a README stating up front that this is a production-shaped
   application over a historical dataset, not a live system.
 
-[Unreleased]: https://github.com/Surge77/ChainSightAI/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/Surge77/ChainSightAI/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/Surge77/ChainSightAI/releases/tag/v1.0.0
 [0.1.0]: https://github.com/Surge77/ChainSightAI/releases/tag/v0.1.0
