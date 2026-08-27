@@ -56,7 +56,20 @@ main { max-width: 62rem; margin: 0 auto; padding: 1.5rem 1.25rem 4rem; }
   background: var(--card);
 }
 
-.wordmark { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.01em; text-decoration: none; color: var(--ink); }
+.wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+  color: var(--ink);
+}
+/* Sized in `em` so the mark tracks the wordmark if the type size ever changes. The SVG
+   also carries width/height attributes: without them a stylesheet that has not arrived yet
+   leaves the browser to use an SVG's 300x150 default, which is a logo the size of a card. */
+.mark { width: 1.5em; height: 1.5em; flex: none; }
 nav { display: flex; flex-wrap: wrap; gap: 1rem; align-items: baseline; }
 nav a, .link { color: var(--accent); text-decoration: none; }
 nav a:hover, .link:hover { text-decoration: underline; }

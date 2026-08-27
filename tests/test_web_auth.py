@@ -8,6 +8,8 @@ than partially trusted.
 
 from __future__ import annotations
 
+import xml.etree.ElementTree as ElementTree
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -144,6 +146,39 @@ class TestSignIn:
 
     def test_a_signed_in_user_is_sent_on(self, client: TestClient, operator: User) -> None:
         assert client.get("/login").headers["location"] == "/orders"
+
+
+class TestBranding:
+    def test_every_page_declares_the_tab_icon(self, client: TestClient) -> None:
+        """A 404 for /favicon.ico on every page load is noise in the console of a tool
+        whose whole argument is that a warning nobody acts on trains people to ignore
+        warnings."""
+        assert 'rel="icon"' in client.get("/login").text
+
+    def test_the_icon_is_served(self, client: TestClient) -> None:
+        response = client.get("/static/favicon.svg")
+
+        assert response.status_code == 200
+        assert "svg" in response.headers["content-type"]
+
+    def test_the_icon_is_well_formed_xml(self, client: TestClient) -> None:
+        """An SVG that does not parse does not appear, and does not complain either.
+
+        The first version of this file had correct geometry and an em dash typed as two
+        hyphens inside an XML comment, which is illegal. The browser rendered a parse error
+        instead of an icon, and nothing in the application noticed.
+        """
+        root = ElementTree.fromstring(client.get("/static/favicon.svg").text)
+
+        assert root.tag.endswith("svg")
+        assert root.get("viewBox") == "0 0 32 32"
+
+    def test_the_mark_is_inline_so_it_follows_the_theme(self, client: TestClient) -> None:
+        """Linked as an <img> it would keep its own colours and look pasted on in dark mode."""
+        body = client.get("/login").text
+
+        assert 'class="mark"' in body
+        assert "currentColor" in body
 
 
 class TestSignOut:

@@ -1,0 +1,31 @@
+<!--
+     Two links of a chain: the project's name, drawn.
+
+     The tab icon is a solid tile rather than a bare mark, because a favicon sits on browser
+     chrome whose colour this page does not control. A knocked-out mark on a fixed navy tile
+     reads on a light tab and a dark one alike, where a mark drawn in the page's own ink
+     would vanish into one of them.
+
+     The second link carries the accent. That is the whole idea of the application in one
+     shape: a chain of orders, and the one you are being told to look at.
+
+     A note for anyone editing the prose above. An XML comment may not contain two
+     consecutive hyphens anywhere inside it, so an em dash typed as a double hyphen makes
+     this file fail to parse. A favicon that fails to parse does not appear and does not
+     complain, which is how the first version of this file shipped: correct geometry,
+     invisible icon. `tests/test_web_auth.py` now parses it.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img"
+     aria-label="ChainSight">
+  <title>ChainSight</title>
+  <rect width="32" height="32" rx="7" fill="#1f4e79" />
+
+  <!-- Link one. -->
+  <circle cx="8.7" cy="16" r="6.2" fill="none" stroke="#f7f7f5" stroke-width="2.6" />
+
+  <!-- Link two, drawn twice: a wide stroke in the tile colour first, which bites a gap out
+       of link one where the two meet, then the mark itself on top. That gap is what makes
+       two rings read as a chain rather than as a pair of circles. -->
+  <circle cx="23.3" cy="16" r="6.2" fill="none" stroke="#1f4e79" stroke-width="5.4" />
+  <circle cx="23.3" cy="16" r="6.2" fill="none" stroke="#e0a044" stroke-width="2.6" />
+</svg>
