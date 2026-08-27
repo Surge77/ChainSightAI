@@ -45,6 +45,9 @@ bash.exe.stackdump
 # Secrets. Nothing in this repository should ever need one, which is the point.
 .env
 .env.*
+# The session secret for a local run. The application refuses to start without one, so
+# running it locally means writing one down somewhere; this keeps that somewhere out of git.
+.runtime-secret
 *.pem
 *.key
 *.pfx

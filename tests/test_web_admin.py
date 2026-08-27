@@ -69,6 +69,15 @@ class TestDashboard:
 
         assert "min: 0, max: 1" in body
 
+    def test_the_charts_do_not_animate(self, client: TestClient, admin: User) -> None:
+        """Chart.js restarts its animation on resize, and a screenshot forces one.
+
+        An animated chart therefore photographs as an empty grid with correct axes, which
+        is how a working dashboard gets reported as broken. Found by taking a screenshot of
+        the real thing, so it is pinned here.
+        """
+        assert "animation: false" in client.get("/admin").text
+
     def test_the_charts_say_they_are_predicted_risk_and_not_an_observed_rate(
         self, client: TestClient, admin: User
     ) -> None:

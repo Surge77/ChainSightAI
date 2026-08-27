@@ -105,6 +105,12 @@
         },
         options: {
           indexAxis: "y",
+          // Off, not shortened. Chart.js restarts its animation on every resize, and a
+          // full-page screenshot forces one -- so an animated chart photographs as an empty
+          // grid with correct axes, which is exactly how somebody reports a working
+          // dashboard as broken. An operator ranking orders gains nothing from bars that
+          // grow.
+          animation: false,
           plugins: { legend: { display: false } },
           scales: { x: { min: 0, max: 1, title: { display: true, text: "predicted probability" } } },
         },
