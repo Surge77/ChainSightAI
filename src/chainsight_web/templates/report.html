@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Order #{{ order.id }} — ChainSight{% endblock %}
+
+{% block content %}
+  <h1>Order #{{ order.id }}</h1>
+
+  {% if not prediction %}
+    <div class="card"><p class="error">This order has no prediction yet.</p></div>
+  {% else %}
+    <div class="card">
+      <p class="priority priority-{{ prediction.priority }}">{{ prediction.priority }}</p>
+      <p style="font-size:1.15rem;margin:0.2rem 0 0">{{ prediction.recommendation }}</p>
+      <p class="figure-note">
+        Scored by {{ prediction.model_name }}, registry version {{ prediction.model_version }},
+        on {{ prediction.created_at.strftime("%Y-%m-%d %H:%M") }} UTC. The numbers below are the
+        ones recorded at that moment; editing the cost model does not rewrite them.
+      </p>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <p class="figure-label">Late-delivery risk</p>
+        <p class="figure">{{ "%.1f%%"|format(prediction.probability * 100) }}</p>
+        <p class="figure-note">
+          Flagged above {{ "%.4f"|format(prediction.threshold) }}, which is derived from the cost
+          of intervening rather than set at a half.
+        </p>
+      </div>
+      <div class="card">
+        <p class="figure-label">Expected profit</p>
+        <p class="figure">{{ "%.2f"|format(prediction.expected_profit) }}</p>
+        <p class="figure-note">
+          The measured mean margin times a known order total — an estimate with a stated
+          basis, not a model output. Nothing here can predict the margin ratio itself.
+        </p>
+      </div>
+      <div class="card">
+        <p class="figure-label">Value at risk</p>
+        <p class="figure">{{ "%.2f"|format(prediction.value_at_risk) }}</p>
+        <p class="figure-note">Probability times what a late delivery on this order costs.</p>
+      </div>
+      <div class="card">
+        <p class="figure-label">Net benefit of acting</p>
+        <p class="figure">{{ "%.2f"|format(prediction.net_benefit) }}</p>
+        <p class="figure-note">Value at risk, less what intervening costs. This is the ranking.</p>
+      </div>
+    </div>
+
+    <h2>Why this is not simply the riskiest order first</h2>
+    <div class="card">
+      <p>
+        Ranking on probability alone treats a rupee of margin and sixty as the same problem.
+        Ranking on net benefit does not. On this dataset the effect is real but bounded: every
+        order falls between a few rupees and 499.95, so the fixed goodwill penalty is the
+        larger half of the exposure on a typical order and a typical order can never reach
+        <span class="priority priority-critical">critical</span> however risky it is. That is a
+        property of the data rather than a bug, and it is stated here rather than implied away.
+      </p>
+    </div>
+  {% endif %}
+
+  <h2>The order as it was entered</h2>
+  <div class="card scroll">
+    <table>
+      <tbody>
+        {% for label, value in fields %}
+          <tr><th>{{ label }}</th><td>{{ value }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

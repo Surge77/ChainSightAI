@@ -27,6 +27,21 @@ def ingested(raw_sample: pd.DataFrame) -> pd.DataFrame:
     return ingest.ingest(raw_sample)
 
 
+def test_the_committed_slice_and_the_source_decode_to_the_same_characters() -> None:
+    """The two files are in different encodings, and reading either wrongly is silent.
+
+    The source is latin-1 and the committed slice is UTF-8, so decoding the slice as latin-1
+    succeeds and produces `AfganistÃ¡n` — a real defect that reached the order form's
+    dropdowns before it was caught, because nothing about it raises.
+    """
+    countries = ingest.read_raw(SAMPLE)["Order Country"]
+
+    accented = [value for value in countries.unique() if not str(value).isascii()]
+    assert accented, "the slice should carry at least one accented country"
+    assert all("Ã" not in str(value) for value in accented)
+    assert any(str(value) == "Afganistán" for value in accented)
+
+
 def test_no_personal_data_survives(ingested: pd.DataFrame) -> None:
     assert set(ingested.columns) & set(schema.personal_data()) == set()
 

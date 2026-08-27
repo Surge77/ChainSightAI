@@ -109,6 +109,35 @@ All notable changes to this project are recorded here. The format follows
   `train`, `registry` and `predict`, every one of them able to run against the committed
   500-row slice so a fresh clone can see the output without a download.
 
+- `src/chainsight_web/`: the application. FastAPI, SQLAlchemy over SQLite, Jinja2 templates
+  and one stylesheet. Six tables — `users`, `orders`, `predictions`, `model_versions`,
+  `training_runs`, `decision_config` — where `model_versions` is a read model refreshed from
+  `artifacts/registry.json` rather than a second place that decides which model is live.
+- Operator pages: an order form whose dropdowns come from the categories the live model was
+  fitted on, and a report that renders a `decision.Decision` field for field. Every field of
+  the decision is stored rather than recomputed, so editing the cost model does not rewrite
+  what a past report says the system decided.
+- Admin pages: a control tower, the model registry, and an editable cost model. Retraining
+  and promotion both go through `registry.promote`, so the compare-then-promote guard has one
+  implementation. A refused promotion is written to `training_runs` with its reason.
+- Security, as `SECURITY.md` has described it since phase 0 and now implements: bcrypt with
+  a refusal rather than silent truncation past its 72-byte limit, signed session cookies
+  carrying nothing but a user id, no default session secret, the admin role read from the
+  database on every request, ownership filtered in the query, and Pydantic validation at
+  every route boundary.
+- `python -m chainsight_web init` and `serve`. Making an administrator is a server-side
+  command because the alternatives — a first-user-becomes-admin rule, or a checkbox on the
+  registration form — are a race and a privilege escalation respectively.
+
+### Fixed
+- `ingest.read_raw` decoded every CSV as latin-1, which is right for the published 92 MB
+  source and wrong for `data/sample_orders.csv`, which `scripts/make_sample.py` writes as
+  UTF-8. Reading the slice by path therefore produced `AfganistÃ¡n` — silently, because
+  latin-1 cannot fail. It now tries UTF-8 strictly first and falls back to latin-1, which is
+  safe in that order and only in that order: UTF-8 is self-validating, so a latin-1 file
+  cannot be misread as UTF-8, while the reverse succeeds and corrupts. Caught by looking at
+  the order form in a browser, where the mangled country names were in a dropdown.
+
 ### Changed
 - `scripts/check_taught.py` now labels rather than blocks. A third tier, `DECLARED`, holds
   names from outside the course material, each carrying the measurement that justified it,

@@ -76,10 +76,27 @@ Accordingly:
 
 ### What is not defended against
 
-Stated plainly so nobody assumes otherwise: no CSRF tokens on form posts yet, no
-brute-force lockout on login, no audit log of admin actions, and no protection against a
-malicious operator poisoning the retraining set through the UI. These are tracked in
-`TODO.md`. A deployment facing anything but localhost needs all four.
+Stated plainly so nobody assumes otherwise.
+
+**No CSRF tokens on form posts.** Session cookies are `SameSite=Lax`, which stops a
+cross-site *form* post from carrying the session, so the practical exposure is narrower than
+it sounds — but `Lax` is a mitigation and not a token, and a deployment facing anything but
+localhost needs the token.
+
+**No brute-force lockout on login.** Nothing counts failed attempts or delays a repeat, so
+an attacker with a candidate list is limited only by bcrypt's own cost.
+
+**No audit log of promotions.** Retraining is recorded in `training_runs` with the
+administrator who triggered it and whether the guard allowed the promotion, and cost-model
+edits are append-only rows in `decision_config` carrying `updated_by` and `updated_at`. A
+promotion made from the registry page is not separately recorded, so "who promoted version
+4" is answerable only when version 4 was promoted by the retrain that produced it.
+
+One item previously listed here has been closed, and by construction rather than by a check:
+**an operator cannot poison the retraining set through the UI**, because retraining reads
+`CHAINSIGHT_DATASET` — a file on the server — and nothing entered through the application
+ever reaches the training data. `orders` and `predictions` are written by the app and read by
+nothing that fits a model.
 
 ## Secrets
 

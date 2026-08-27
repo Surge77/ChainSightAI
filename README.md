@@ -110,8 +110,8 @@ is. Every phase is a branch, a pull request and a tag.
 | 9 — ranking metrics, one-hot, declared models | done |
 | 10 — decision engine | done (`v0.4.0`) |
 | 11 — persistence, registry and CLI | done (`v0.5.0`) |
-| 12–14 — FastAPI service, operator pages, control tower | next |
-| 15 — model card, ADRs, release | pending |
+| 12–14 — FastAPI service, operator pages, control tower | done (`v0.6.0`) |
+| 15 — model card, ADRs, release | next |
 
 ## Getting started
 
@@ -160,6 +160,44 @@ model is a candidate, and serving it because it is last in the list is the accid
 registry exists to prevent. And **promotion compares before it promotes** — a retrain that
 scores below the model already serving is refused, on ranking rather than accuracy, and
 `--force` is how you say you meant it.
+
+## The application
+
+```bash
+export CHAINSIGHT_SESSION_SECRET=$(python -c "import secrets; print(secrets.token_urlsafe(32))")
+
+python -m chainsight train --sample --promote          # something to serve
+python -m chainsight_web init --email you@example.com  # prompts for a password
+python -m chainsight_web serve                         # http://127.0.0.1:8000
+```
+
+There is no default session secret and the process will not start without one. A default in
+a public repository is a forged-session vulnerability with the key published beside it.
+
+An **operator** enters an order — the same sixteen at-order fields the model was trained on,
+with the dropdowns built from the categories it was actually fitted on — and gets a report:
+the risk, the expected profit, the exposure, and the net benefit that decides the priority.
+An **administrator** additionally sees the control tower, the model registry and the cost
+model, and can retrain and promote from the browser.
+
+Four things about it are worth stating, because each is a decision rather than a default:
+
+- **Promotion compares before it promotes**, through the same `registry.promote` the CLI
+  uses. A retrain that scores below the model already serving is refused and the refusal is
+  written to `training_runs` with its reason — that row is what answers "why is the serving
+  model three weeks old".
+- **Ownership is a `WHERE` clause**, not a check after the fetch, and a missing order and
+  somebody else's order are the same 404.
+- **The admin role is read from the database on every request.** Granting or revoking it
+  takes effect immediately, because nothing about the role is cached in the cookie.
+- **Retraining reads a file on the server.** Nothing entered through the UI reaches the
+  training set, so an operator cannot poison it through the order form.
+
+The charts are held to the same standard as the rest of the project. They plot *predicted*
+risk on entered orders rather than an observed late rate, every mean carries its sample size,
+a group under five orders is marked noisy, and the axis is pinned to [0, 1] — because the
+observed regional spread on this dataset is about five points around a 0.5483 base rate, and
+a cropped axis would turn that into a cliff.
 
 ## This is not a live system
 

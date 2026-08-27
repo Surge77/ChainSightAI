@@ -1,0 +1,40 @@
+{# Shared fragments. Imported rather than defined inside a child template, because a macro
+   defined next to a `{% block %}` and called from inside it is a rule about Jinja's
+   execution order that a reader has to know before they can trust the page. #}
+
+{% macro group_table(groups, noisy_below) %}
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>Group</th>
+          <th class="number">Mean predicted risk</th>
+          <th class="number">Orders</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for group in groups %}
+          <tr>
+            <td>{{ group.label }}</td>
+            <td class="number">{{ "%.4f"|format(group.mean_probability) }}</td>
+            <td class="number">
+              {{ group.orders }}{% if group.is_noisy %} <span class="caption">noisy</span>{% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="caption">
+    A group with fewer than {{ noisy_below }} orders is marked noisy. Its mean is a number,
+    not a measurement.
+  </p>
+{% endmacro %}
+
+{% macro scores_cells(scores) %}
+  {% for key in ["roc auc", "avg precision", "f1", "accuracy"] %}
+    <td class="number">
+      {% if key in scores %}{{ "%.4f"|format(scores[key]) }}{% else %}—{% endif %}
+    </td>
+  {% endfor %}
+{% endmacro %}

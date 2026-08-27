@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}New order — ChainSight{% endblock %}
+
+{% block content %}
+  <h1>New order</h1>
+  <p class="lede">
+    Sixteen fields, and every one of them is knowable at the moment an order is placed.
+    Nothing about the shipment appears here, because nothing about the shipment has
+    happened yet — that is the whole argument of this project, in the shape of a form.
+  </p>
+
+  {% if not choices %}
+    <div class="card">
+      <p class="error">{{ blocked }}</p>
+      <p class="caption">
+        The dropdown values come from the categories the live model was fitted on, so there
+        is no honest form to show until a model is promoted.
+      </p>
+    </div>
+  {% else %}
+    <form class="stack wide card" method="post" action="/orders/new">
+      {% for field, options in choices.items() %}
+        <label>
+          {{ labels[field] }}
+          <select name="{{ field }}" required>
+            {% for option in options %}
+              <option value="{{ option }}">{{ option }}</option>
+            {% endfor %}
+          </select>
+        </label>
+      {% endfor %}
+
+      <label>
+        Quantity
+        <input type="number" name="quantity" min="1" max="1000" step="1" value="1" required />
+      </label>
+      <label>
+        Product price
+        <input type="number" name="product_price" min="0" step="0.01" value="199.99" required />
+      </label>
+      <label>
+        Order total
+        <input type="number" name="order_total" min="0" step="0.01" value="191.99" required />
+        <span class="caption">After discount. This is the number the decision engine uses.</span>
+      </label>
+      <label>
+        Discount rate
+        <input type="number" name="discount_rate" min="0" max="1" step="0.01" value="0.04"
+               required />
+      </label>
+      <label>
+        Ordered at
+        <input type="datetime-local" name="ordered_at" value="{{ default_ordered_at }}" required />
+      </label>
+
+      <div class="actions">
+        <button class="primary" type="submit">Score this order</button>
+      </div>
+    </form>
+  {% endif %}
+{% endblock %}

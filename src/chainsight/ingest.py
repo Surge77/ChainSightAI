@@ -33,13 +33,23 @@ class SchemaError(ValueError):
 
 
 def read_raw(path: Path | str) -> pd.DataFrame:
-    """Read the source CSV with the encoding it is actually in.
+    """Read a CSV with the encoding it is actually in, which is not the same for both files.
 
-    `data/dataset_manifest.json` records that the file is latin-1. Reading it with the
-    default encoding raises `UnicodeDecodeError` at byte 1709, which is a confusing way
-    to learn a fact that belongs in a docstring.
+    `data/dataset_manifest.json` records that the published source is latin-1: reading it as
+    UTF-8 raises `UnicodeDecodeError` at byte 1709. The committed slice is not. It is written
+    by `scripts/make_sample.py` as UTF-8, because a file in a public repository should render
+    in a browser and a text editor rather than arriving as mojibake.
+
+    So UTF-8 is tried first, strictly, and latin-1 is used when that fails. This is a
+    decision rather than a guess, and the asymmetry is the reason it is safe: UTF-8 is
+    self-validating, so a latin-1 file carrying an accent cannot be read as UTF-8 by
+    accident, while a UTF-8 file read as latin-1 succeeds and silently produces
+    `AfganistÃ¡n`. Only the failing direction is loud, so that is the direction to try first.
     """
-    return pd.read_csv(path, encoding=schema.ENCODING, low_memory=False)
+    try:
+        return pd.read_csv(path, encoding="utf-8", low_memory=False)
+    except UnicodeDecodeError:
+        return pd.read_csv(path, encoding=schema.ENCODING, low_memory=False)
 
 
 def check_columns(frame: pd.DataFrame) -> None:

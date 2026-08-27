@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui %}
+{% block title %}Models — ChainSight{% endblock %}
+
+{% block content %}
+  <h1>Model registry</h1>
+  <p class="lede">
+    Registering a model does not promote it. Promotion compares the candidate against
+    whatever is serving on <strong>{{ metric }}</strong> and refuses a regression, because
+    retraining produces a newer model and newer is not better.
+  </p>
+
+  <div class="card scroll">
+    {% if versions %}
+      <table>
+        <thead>
+          <tr>
+            <th>Version</th><th>Model</th><th>Trained</th>
+            <th class="number">ROC AUC</th><th class="number">Avg precision</th>
+            <th class="number">F1</th><th class="number">Accuracy</th>
+            <th>Promote</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for version in versions %}
+            <tr>
+              <td>{{ version.version }}{% if version.is_live %} <strong>· serving</strong>{% endif %}</td>
+              <td>{{ version.model_name }}<br /><span class="caption">{{ version.note }}</span></td>
+              <td><span class="caption">{{ version.trained_at }}</span></td>
+              {{ ui.scores_cells(version.scores) }}
+              <td>
+                {% if not version.is_live %}
+                  <form class="inline" method="post" action="/admin/models/promote">
+                    <input type="hidden" name="version" value="{{ version.version }}" />
+                    <button class="secondary" type="submit">Promote</button>
+                  </form>
+                  <form class="inline" method="post" action="/admin/models/promote">
+                    <input type="hidden" name="version" value="{{ version.version }}" />
+                    <input type="hidden" name="force" value="true" />
+                    <button class="link" type="submit">force</button>
+                  </form>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>Nothing registered yet. Train one below.</p>
+    {% endif %}
+  </div>
+
+  <h2>Retrain</h2>
+  <div class="card">
+    <p>
+      Training reads the dataset file on this machine. Nothing entered through this
+      application reaches the training set, which is why an operator cannot poison it
+      through the order form.
+    </p>
+    <form class="stack" method="post" action="/admin/models/retrain">
+      <label>
+        Candidate
+        <select name="model_name">
+          {% for name in candidates %}
+            <option value="{{ name }}" {% if name == default_model %}selected{% endif %}>{{ name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>
+        Why this run is happening
+        <input type="text" name="note" maxlength="256" placeholder="monthly refresh" />
+      </label>
+      <label>
+        <span>
+          <input type="checkbox" name="promote" value="true" />
+          Promote it if it beats what is serving
+        </span>
+      </label>
+      <div class="actions">
+        <button class="primary" type="submit">Train</button>
+        <span class="caption">
+          This runs to completion before the page returns. On the full table that is minutes.
+        </span>
+      </div>
+    </form>
+  </div>
+
+  <h2>Recent training runs</h2>
+  <div class="card scroll">
+    {% if runs %}
+      <table>
+        <thead>
+          <tr>
+            <th>When</th><th>Model</th><th class="number">Rows</th>
+            <th class="number">Seconds</th><th>Outcome</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for run in runs %}
+            <tr>
+              <td><span class="caption">{{ run.created_at.strftime("%Y-%m-%d %H:%M") }}</span></td>
+              <td>{{ run.model_name }}</td>
+              <td class="number">{{ "{:,}".format(run.rows_trained) }}</td>
+              <td class="number">{{ "%.1f"|format(run.seconds) }}</td>
+              <td>{{ run.outcome }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <p class="caption">
+        Refused promotions are kept. The guard turning a retrain down is why the serving
+        model is the age it is, and a log of successes alone cannot answer that.
+      </p>
+    {% else %}
+      <p>No retrains have been run from this application.</p>
+    {% endif %}
+  </div>
+{% endblock %}

@@ -7,13 +7,12 @@ Things known to be missing, so a cold start does not rediscover them. Closed ite
 
 ## Where the project is
 
-Twelve phases merged to `main`, every one behind a green CI run on Python 3.11 and 3.12.
-**314 tests, `src/` at 100% line and branch coverage.** Tags: `v0.1.0`, `v0.2.0`, `v0.3.0`,
-`v0.4.0`, `v0.5.0`.
+Fifteen phases merged to `main`, every one behind a green CI run on Python 3.11 and 3.12.
+**438 tests, `src/` at 100% line and branch coverage.** Tags: `v0.1.0` through `v0.6.0`.
 
-The ML core is finished, its findings are written down, and a trained model can now be
-saved, registered, promoted and served from the command line. What is missing is the web
-app.
+The ML core is finished, its findings are written down, a trained model can be saved,
+registered, promoted and served, and the application around it runs. What is left is the
+documentation that says what the model may and may not be used for.
 
 ### To pick it up again
 
@@ -33,6 +32,7 @@ python scripts/render_audit.py --check
 Reproduce the headline numbers:
 
 ```bash
+python -m chainsight_web serve          # the application, once a model is promoted
 python -m chainsight compare            # the fourteen-model comparison
 python -m chainsight compare --margin   # and the margin half, which finds nothing
 python -m chainsight leakage            # both leaks, trained twice each
@@ -62,17 +62,6 @@ in this repository turned out to be wrong and was corrected next to the original
 
 ## Next, in dependency order
 
-- [ ] **Phase 12–13 — FastAPI, SQLite, auth, operator pages.** Worth doing on one branch to
-      save CI cycles. Tables: `users`, `orders`, `predictions`, `model_versions`,
-      `training_runs`, `decision_config`. Jinja2 templates, Chart.js from a CDN. The report
-      page renders a `decision.Decision` directly, so start from that dataclass, and load
-      the model through `persistence.load` and `registry.current` rather than opening a
-      path — the loader refuses a path for a reason.
-- [ ] **Phase 14 — admin control tower.** KPIs, charts, model registry page, retrain behind
-      the compare-then-promote guard `registry.promote` already implements — the route
-      should call it, not reimplement it. **The charts must not imply signal that is not there** —
-      regional late rate varies by about five points around the base rate, not the 72/48/34
-      an earlier draft of this project imagined.
 - [ ] **Phase 10, deferred — counterfactual explanations.** Re-predict with one controllable
       field changed and report the delta. Deliberately below the web app; the most droppable
       piece in the plan.
@@ -108,12 +97,17 @@ in this repository turned out to be wrong and was corrected next to the original
 
 ## Security, before this faces anything but localhost
 
-Named in `SECURITY.md` as deliberately absent. All four are required for a real deployment.
+Named in `SECURITY.md` as deliberately absent.
 
-- [ ] CSRF tokens on every form post.
-- [ ] Login rate limiting and account lockout.
-- [ ] An audit log of admin actions — promotions, retrains, config changes.
-- [ ] A guard against an operator poisoning the retraining set through the UI.
+- [ ] CSRF tokens on every form post. `SameSite=Lax` narrows the exposure and is not a
+      substitute for the token.
+- [ ] Login rate limiting and account lockout. Nothing currently counts failed attempts.
+- [ ] Record promotions made from the registry page. Retrains and cost-model edits already
+      carry an author and a timestamp; a promotion made on its own does not.
+
+Closed by construction rather than by a check: an operator cannot poison the retraining set
+through the UI, because retraining reads `CHAINSIGHT_DATASET` — a file on the server — and
+nothing entered through the application reaches the training data.
 
 ## Deferred infrastructure
 
