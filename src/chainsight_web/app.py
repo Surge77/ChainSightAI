@@ -18,7 +18,7 @@ from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from chainsight_web import routes_admin, routes_auth, routes_orders
+from chainsight_web import routes_accounts, routes_admin, routes_auth, routes_orders
 from chainsight_web.config import Settings
 from chainsight_web.database import build_engine, build_sessions, create_tables
 from chainsight_web.service import ModelService
@@ -49,6 +49,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(routes_auth.router)
     app.include_router(routes_orders.router)
     app.include_router(routes_admin.router)
+    app.include_router(routes_accounts.router)
     app.add_exception_handler(StarletteHTTPException, _html_errors)
     return app
 

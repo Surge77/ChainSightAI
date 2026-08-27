@@ -7,6 +7,17 @@ All notable changes to this project are recorded here. The format follows
 ## [Unreleased]
 
 ### Added
+- `/admin/users`: an administrator can grant and revoke the administrator role. ADR 0009 is
+  amended rather than contradicted — its objections were to the role being *self*-granted
+  (a registration checkbox, a first-user-wins race), and neither describes an existing
+  administrator promoting a colleague. Requiring a shell for that is a bottleneck, and what
+  people do about bottlenecks is share the admin password.
+- `role_changes`: every grant and revoke, naming both parties, written in the same commit as
+  the change and shown on the page that makes them. The emails are stored on the row rather
+  than joined, so the record survives the account being deleted.
+- Three things the page still will not do: create an account (no password field, because an
+  administrator who sets your password makes your every action deniable), remove the last
+  administrator (whoever asks), or change a role without recording it.
 - A separate administrator sign-in at `/admin/login`, and an anonymous visitor to an admin
   page is now sent there rather than to the operator form. It is a separate door, not a
   separate mechanism: the same credential check, the same signed cookie, and the same role

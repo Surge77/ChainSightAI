@@ -114,10 +114,13 @@ Nothing is required for `v1.0.0`. What follows is the work that would make it be
 Named in `SECURITY.md` as deliberately absent.
 
 - [ ] CSRF tokens on every form post. `SameSite=Lax` narrows the exposure and is not a
-      substitute for the token.
+      substitute for the token. **Now the highest-priority item here:** since role
+      management moved into the UI, the most valuable request behind this gap is
+      `POST /admin/users/role`, not a cost-model edit.
 - [ ] Login rate limiting and account lockout. Nothing currently counts failed attempts.
-- [ ] Record promotions made from the registry page. Retrains and cost-model edits already
-      carry an author and a timestamp; a promotion made on its own does not.
+- [ ] Record model promotions made from the registry page. Retrains, cost-model edits and
+      role changes all carry an author and a timestamp; a model promotion made on its own
+      does not.
 
 Closed by construction rather than by a check: an operator cannot poison the retraining set
 through the UI, because retraining reads `CHAINSIGHT_DATASET` — a file on the server — and

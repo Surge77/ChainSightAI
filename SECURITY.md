@@ -65,6 +65,11 @@ Accordingly:
   default secret in a portfolio repo is a forged-session vulnerability with a public key.
 - The admin role is checked server-side on every admin route. It is never inferred from a
   form field, a cookie value, a query parameter, or a template variable.
+- An administrator may grant and revoke the role at `/admin/users`, and every change writes
+  a `role_changes` row naming both parties. Nobody can grant themselves the role, no page
+  here sets another person's password, and the last administrator cannot be demoted. Making
+  the *first* administrator still requires `python -m chainsight_web init` on the server,
+  because there is nobody to authorise it.
 - Administrators sign in at a separate page, `/admin/login`. It is a separate *door*, not a
   separate mechanism: same credential check, same signed cookie, same role read from the
   database. It cannot grant the role, and it answers a valid operator's credentials with the
@@ -88,16 +93,19 @@ Stated plainly so nobody assumes otherwise.
 **No CSRF tokens on form posts.** Session cookies are `SameSite=Lax`, which stops a
 cross-site *form* post from carrying the session, so the practical exposure is narrower than
 it sounds — but `Lax` is a mitigation and not a token, and a deployment facing anything but
-localhost needs the token.
+localhost needs the token. **This became more serious when role management moved into the
+UI:** the most valuable thing behind that gap is no longer a cost-model edit, it is
+`POST /admin/users/role`. It is the first thing to fix before this faces anything.
 
 **No brute-force lockout on login.** Nothing counts failed attempts or delays a repeat, so
 an attacker with a candidate list is limited only by bcrypt's own cost.
 
-**No audit log of promotions.** Retraining is recorded in `training_runs` with the
-administrator who triggered it and whether the guard allowed the promotion, and cost-model
-edits are append-only rows in `decision_config` carrying `updated_by` and `updated_at`. A
-promotion made from the registry page is not separately recorded, so "who promoted version
-4" is answerable only when version 4 was promoted by the retrain that produced it.
+**No audit log of model promotions.** Retraining is recorded in `training_runs` with the
+administrator who triggered it and whether the guard allowed the promotion; cost-model edits
+are append-only rows in `decision_config` carrying `updated_by` and `updated_at`; and role
+changes are in `role_changes` naming both parties. A *model* promotion made on its own from
+the registry page is still not separately recorded, so "who promoted version 4" is
+answerable only when version 4 was promoted by the retrain that produced it.
 
 One item previously listed here has been closed, and by construction rather than by a check:
 **an operator cannot poison the retraining set through the UI**, because retraining reads

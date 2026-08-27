@@ -17,4 +17,4 @@ somebody does.
 | [0006](0006-derive-the-threshold.md) | Derive the decision threshold from costs | accepted |
 | [0007](0007-json-registry.md) | A JSON registry with a compare-then-promote guard, not MLflow | accepted |
 | [0008](0008-server-rendered-sqlite.md) | Server-rendered pages over SQLite, not an SPA | accepted |
-| [0009](0009-no-default-session-secret.md) | No default session secret | accepted |
+| [0009](0009-no-default-session-secret.md) | No default session secret | accepted, amended for role management |

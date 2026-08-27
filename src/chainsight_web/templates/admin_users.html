@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Accounts — ChainSight{% endblock %}
+
+{% block content %}
+  <h1>Accounts</h1>
+  <p class="lede">
+    {{ accounts | length }} account{{ "" if accounts | length == 1 else "s" }},
+    {{ administrators }} of them administrator{{ "" if administrators == 1 else "s" }}.
+  </p>
+
+  <div class="card">
+    <p>
+      There is no password field on this page, deliberately. An administrator who sets
+      somebody else's password knows it afterwards, and every action by that account becomes
+      deniable. People register themselves at <a href="/register">/register</a> as operators;
+      an administrator grants the role to an account that already exists.
+    </p>
+    <p class="caption">
+      The first administrator is the exception, and has to be, because there is nobody to
+      grant it: <code>python -m chainsight_web init --email you@example.com</code> on the
+      server.
+    </p>
+  </div>
+
+  <div class="card scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>Account</th>
+          <th>Role</th>
+          <th class="number">Orders</th>
+          <th>Joined</th>
+          <th>Change</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for account, orders in accounts %}
+          <tr>
+            <td>
+              {{ account.email }}
+              {% if account.id == user.id %}<span class="caption">— you</span>{% endif %}
+            </td>
+            <td>
+              {% if account.is_admin %}
+                <span class="priority priority-high">administrator</span>
+              {% else %}
+                <span class="caption">operator</span>
+              {% endif %}
+            </td>
+            <td class="number">{{ orders }}</td>
+            <td><span class="caption">{{ account.created_at.strftime("%Y-%m-%d") }}</span></td>
+            <td>
+              <form class="inline" method="post" action="/admin/users/role">
+                <input type="hidden" name="user_id" value="{{ account.id }}" />
+                <input type="hidden" name="make_admin"
+                       value="{{ 'false' if account.is_admin else 'true' }}" />
+                <button class="secondary" type="submit">
+                  {{ "Revoke" if account.is_admin else "Make administrator" }}
+                </button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p class="caption">
+      The last administrator cannot be demoted, whoever asks. An application with no
+      administrator has no way back in short of the command line, and that is one careless
+      click away on your own row.
+    </p>
+  </div>
+
+  <h2>Role changes</h2>
+  <div class="card scroll">
+    {% if changes %}
+      <table>
+        <thead>
+          <tr><th>When</th><th>Who</th><th>Change</th><th>Account</th></tr>
+        </thead>
+        <tbody>
+          {% for change in changes %}
+            <tr>
+              <td><span class="caption">{{ change.created_at.strftime("%Y-%m-%d %H:%M") }}</span></td>
+              <td>{{ change.actor_email }}</td>
+              <td>
+                {% if change.granted %}granted{% else %}revoked{% endif %}
+              </td>
+              <td>{{ change.subject_email }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <p class="caption">
+        Kept whole, and shown here rather than only written. An audit nobody reads is a log.
+        The email addresses are stored on the row itself, so this stays legible after an
+        account is gone.
+      </p>
+    {% else %}
+      <p>No role has been granted or revoked from this application.</p>
+    {% endif %}
+  </div>
+{% endblock %}

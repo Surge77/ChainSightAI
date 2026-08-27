@@ -207,3 +207,32 @@ class DecisionConfig(Base):
     monitor_above: Mapped[float] = mapped_column(Float)
     updated_by: Mapped[int] = mapped_column(ForeignKey("users.id"))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class RoleChange(Base):
+    """Who granted or revoked the administrator role, to whom, and when.
+
+    The role is the most sensitive thing this application can change about an account, and
+    it is now changeable from a browser rather than only from a shell on the server. That
+    trade is only acceptable if every change is attributable, so this table is written on
+    the same commit as the change itself and is shown on the page that makes them.
+
+    Two foreign keys point at `users` and neither carries a relationship. `actor` and
+    `subject` would both need an explicit join condition to disambiguate, and nothing here
+    navigates from a user to their role changes -- the page reads this table directly.
+
+    The two email columns duplicate what the join would give, deliberately. An audit row
+    has to stay readable after the account it names is gone, and a log that renders as
+    `user 7 promoted user 12` once the rows are deleted has recorded nothing worth keeping.
+    """
+
+    __tablename__ = "role_changes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    actor_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    actor_email: Mapped[str] = mapped_column(String(320))
+    subject_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    subject_email: Mapped[str] = mapped_column(String(320))
+    #: True when the role was granted, False when it was taken away.
+    granted: Mapped[bool] = mapped_column(Boolean)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)

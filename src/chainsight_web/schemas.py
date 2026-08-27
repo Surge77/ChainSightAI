@@ -119,6 +119,19 @@ class Promotion(BaseModel):
     force: bool = False
 
 
+class RoleAssignment(BaseModel):
+    """One administrator changing another account's role.
+
+    `make_admin` is an explicit boolean carried by a hidden field rather than a checkbox.
+    An unchecked checkbox is simply absent from the submission, so the form would say
+    nothing and the route would have to read that silence as "revoke" -- which is a lot of
+    consequence to hang on a field that is not there.
+    """
+
+    user_id: int = Field(ge=1)
+    make_admin: bool
+
+
 class RetrainInput(BaseModel):
     """A retrain request. `promote` asks for it; the guard decides whether it happens."""
 
