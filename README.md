@@ -109,8 +109,8 @@ is. Every phase is a branch, a pull request and a tag.
 | 8 — the margin model, and the oracle ceiling | done |
 | 9 — ranking metrics, one-hot, declared models | done |
 | 10 — decision engine | done (`v0.4.0`) |
-| 11 — persistence and CLI | next |
-| 12–14 — FastAPI service, operator pages, control tower | pending |
+| 11 — persistence, registry and CLI | done (`v0.5.0`) |
+| 12–14 — FastAPI service, operator pages, control tower | next |
 | 15 — model card, ADRs, release | pending |
 
 ## Getting started
@@ -123,6 +123,43 @@ pip install -e ".[web,dev]"
 python scripts/check_taught.py  # the curriculum gate
 pytest -q
 ```
+
+## The command line
+
+Every command runs on the committed 500-row slice with `--sample`, so the output below can
+be reproduced without downloading the 92 MB source file.
+
+```console
+$ python -m chainsight describe --sample
+500 rows x 18 columns (16 feature candidates)
+orders from 2015-01-01 to 2018-01-30
+late rate 0.5800
+margin ratio: mean 0.1200, 16.2000% loss-making
+
+$ python -m chainsight train --sample --promote
+one-hot random forest: fitted on 347 orders, scored on 65
+threshold       0.2966 (derived from the cost model, not assumed)
+registered as version 1
+promoted version 1; it is now serving
+
+$ python -m chainsight predict order.json
+HIGH  Worth intervening. 75% risk, and acting costs less than the exposure.
+
+  late-delivery risk   0.7478  (flagged above 0.2966)
+  order total          191.99
+  value at risk        27.28
+  net benefit of act   12.28
+```
+
+`predict --template` prints a blank order with every field an order needs, because
+`features.single_order` refuses a field list that is not exactly right — a silently
+defaulted feature is a prediction about a different order.
+
+Two things the registry does that are worth naming. **Training never promotes**: a fresh
+model is a candidate, and serving it because it is last in the list is the accident the
+registry exists to prevent. And **promotion compares before it promotes** — a retrain that
+scores below the model already serving is refused, on ranking rather than accuracy, and
+`--force` is how you say you meant it.
 
 ## This is not a live system
 
