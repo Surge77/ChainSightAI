@@ -123,6 +123,16 @@ Closed by construction rather than by a check: an operator cannot poison the ret
 through the UI, because retraining reads `CHAINSIGHT_DATASET` — a file on the server — and
 nothing entered through the application reaches the training data.
 
+## Known noise
+
+- [ ] Every test run prints `StarletteDeprecationWarning: Using httpx with
+      starlette.testclient is deprecated; install httpx2 instead`. It comes from FastAPI's
+      own `TestClient` and cannot be silenced by anything this repository does short of
+      taking `httpx2` as a dependency — which needs the same audit as any other new
+      dependency, so it is recorded here rather than papered over with a warning filter.
+      This project's own position is that a warning on every run trains a reader to ignore
+      warnings, so this should not sit here indefinitely.
+
 ## Deferred infrastructure
 
 - [ ] Dockerfile and compose.
