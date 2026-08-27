@@ -7,12 +7,13 @@ Things known to be missing, so a cold start does not rediscover them. Closed ite
 
 ## Where the project is
 
-Eleven phases merged to `main`, every one behind a green CI run on Python 3.11 and 3.12.
-**225 tests, `src/` at 100% line and branch coverage.** Tags: `v0.1.0`, `v0.2.0`, `v0.3.0`,
-`v0.4.0`.
+Twelve phases merged to `main`, every one behind a green CI run on Python 3.11 and 3.12.
+**314 tests, `src/` at 100% line and branch coverage.** Tags: `v0.1.0`, `v0.2.0`, `v0.3.0`,
+`v0.4.0`, `v0.5.0`.
 
-The ML core is finished and its findings are written down. What is missing is the
-application: persistence, a CLI, and the web app.
+The ML core is finished, its findings are written down, and a trained model can now be
+saved, registered, promoted and served from the command line. What is missing is the web
+app.
 
 ### To pick it up again
 
@@ -32,10 +33,15 @@ python scripts/render_audit.py --check
 Reproduce the headline numbers:
 
 ```bash
+python -m chainsight compare            # the fourteen-model comparison
+python -m chainsight compare --margin   # and the margin half, which finds nothing
+python -m chainsight leakage            # both leaks, trained twice each
 python scripts/report_baselines.py      # what every model is measured against
-python scripts/report_classifiers.py    # the fourteen-model comparison
-python -c "from chainsight import leakage; print(leakage.report('data/raw/DataCoSupplyChainDataset.csv'))"
 ```
+
+The `scripts/` versions are kept: they are pinned to regenerating the numbers in the
+documents, and a document whose figures cannot be reproduced by running the file that
+produced them is a document that will drift.
 
 Read `docs/results.md` first. It carries the findings, and two places where an earlier claim
 in this repository turned out to be wrong and was corrected next to the original.
@@ -56,18 +62,15 @@ in this repository turned out to be wrong and was corrected next to the original
 
 ## Next, in dependency order
 
-- [ ] **Phase 11 — persistence, registry and CLI.** A joblib artefact carrying the fitted
-      `FeatureSpace` and estimator plus a manifest (library versions, feature-set hash,
-      dataset hash), a JSON model registry, and `python -m chainsight` with `describe`,
-      `leakage`, `compare`, `train` and `predict`. The web app cannot load anything until
-      this exists. `SECURITY.md` already states the loader must refuse a path resolving
-      outside the artefacts directory — implement that, do not just keep the sentence.
 - [ ] **Phase 12–13 — FastAPI, SQLite, auth, operator pages.** Worth doing on one branch to
       save CI cycles. Tables: `users`, `orders`, `predictions`, `model_versions`,
       `training_runs`, `decision_config`. Jinja2 templates, Chart.js from a CDN. The report
-      page renders a `decision.Decision` directly, so start from that dataclass.
-- [ ] **Phase 14 — admin control tower.** KPIs, charts, model registry page, retrain behind a
-      compare-then-promote guard. **The charts must not imply signal that is not there** —
+      page renders a `decision.Decision` directly, so start from that dataclass, and load
+      the model through `persistence.load` and `registry.current` rather than opening a
+      path — the loader refuses a path for a reason.
+- [ ] **Phase 14 — admin control tower.** KPIs, charts, model registry page, retrain behind
+      the compare-then-promote guard `registry.promote` already implements — the route
+      should call it, not reimplement it. **The charts must not imply signal that is not there** —
       regional late rate varies by about five points around the base rate, not the 72/48/34
       an earlier draft of this project imagined.
 - [ ] **Phase 10, deferred — counterfactual explanations.** Re-predict with one controllable

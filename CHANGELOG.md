@@ -89,6 +89,26 @@ All notable changes to this project are recorded here. The format follows
   unnecessary intervention. Ranking is by net benefit, so a 499.95 order at 85% risk
   outranks a 20.00 order at 90%.
 
+- `src/chainsight/persistence.py`: artefacts, and the two ways loading one goes wrong.
+  `joblib.load` unpickles, so the loader takes a *name* and refuses anything resolving
+  outside the artefacts directory — the sentence `SECURITY.md` has carried since phase 0 is
+  now the code that keeps it. Every artefact carries a manifest recording the feature-set
+  hash, the dataset hash and the four library versions inside the pickle, and a mismatch on
+  any of them is a hard error. The failure being defended against is silent: an estimator
+  indexes its features positionally, so the same columns in a different order predicts
+  confidently and wrongly.
+- `src/chainsight/training.py`: one path that fits the model the application serves, reusing
+  `split.by_date`, `FeatureSpace.fit` and `tuning.tune` rather than reimplementing any of
+  them. The production default is the one-hot random forest, chosen on ranking, and the
+  threshold in its manifest comes from the cost model rather than from 0.5.
+- `src/chainsight/registry.py`: a JSON model registry, readable in a text editor in two
+  years with no tooling installed. Registering never promotes, and promoting compares the
+  candidate against the incumbent on ranking and refuses a regression — newer is not better.
+  `force` exists so that overriding the guard appears in the argument list.
+- `src/chainsight/cli.py` and `python -m chainsight`: `describe`, `leakage`, `compare`,
+  `train`, `registry` and `predict`, every one of them able to run against the committed
+  500-row slice so a fresh clone can see the output without a download.
+
 ### Changed
 - `scripts/check_taught.py` now labels rather than blocks. A third tier, `DECLARED`, holds
   names from outside the course material, each carrying the measurement that justified it,
