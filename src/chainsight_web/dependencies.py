@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 
 from chainsight_web.config import Settings
 from chainsight_web.database import session_scope
-from chainsight_web.security import COOKIE_NAME, read_session
+from chainsight_web.security import COOKIE_NAME, CSRF_COOKIE, CSRF_FIELD, csrf_matches, read_session
 from chainsight_web.service import ModelService
 from chainsight_web.tables import User
 
@@ -30,6 +30,12 @@ LOGIN_PATH = "/login"
 
 #: And where they are sent when the page they wanted needs an administrator.
 ADMIN_LOGIN_PATH = "/admin/login"
+
+#: Where somebody holding a temporary password is held until they replace it.
+CHANGE_PASSWORD_PATH = "/password"
+
+#: Methods that change nothing, and therefore need no CSRF token.
+SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS", "TRACE"})
 
 
 def get_settings(request: Request) -> Settings:
@@ -66,14 +72,32 @@ def current_user(
 
 
 def require_user(user: Annotated[User | None, Depends(current_user)]) -> User:
-    """A logged-in user, or a redirect to the login form."""
+    """A logged-in user who has replaced any temporary password, or a redirect."""
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_303_SEE_OTHER,
             detail="this page needs a login",
             headers={"Location": LOGIN_PATH},
         )
+    _held_until_password_changed(user)
     return user
+
+
+def _held_until_password_changed(user: User) -> None:
+    """Send somebody still holding an administrator-set password to replace it.
+
+    This is what makes an administrator-created account acceptable at all. Without it the
+    password an administrator typed keeps working for the life of the account, the
+    administrator knows it, and every action by that account is deniable — "that could have
+    been the admin". The temporary password opens exactly one door, and that door is this
+    one.
+    """
+    if user.must_change_password:
+        raise HTTPException(
+            status_code=status.HTTP_303_SEE_OTHER,
+            detail="this account still has the password it was given",
+            headers={"Location": CHANGE_PASSWORD_PATH},
+        )
 
 
 def require_admin(user: Annotated[User | None, Depends(current_user)]) -> User:
@@ -94,9 +118,43 @@ def require_admin(user: Annotated[User | None, Depends(current_user)]) -> User:
             detail="this page needs an administrator login",
             headers={"Location": ADMIN_LOGIN_PATH},
         )
+    _held_until_password_changed(user)
     if not user.is_admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="this page is for administrators",
         )
     return user
+
+
+async def verify_csrf(request: Request) -> None:
+    """Refuse any state-changing request that does not carry a matching CSRF token.
+
+    This is registered once, on the application, rather than listed on each route that
+    needs it. A per-route dependency is a thing somebody has to remember when they add the
+    next form, and the failure mode of forgetting is silent: the route works perfectly and
+    is simply unprotected. Registered globally it fails closed — a new POST without a token
+    is refused until its form is fixed, which is a loud, immediate, harmless failure.
+
+    The scheme is double-submit. A random token lives in its own cookie, the same value is
+    rendered into every form, and the two have to match. The cookie is `HttpOnly`, so a
+    script cannot read it; `SameSite=Lax` already stops a cross-site form post carrying it;
+    and an attacker who can do neither cannot produce a pair that matches.
+
+    Reading the form here is safe alongside a route that also declares one. Starlette caches
+    the parsed body on the request, and FastAPI hands dependencies and the endpoint the same
+    request object, so the body is parsed once and shared.
+    """
+    if request.method in SAFE_METHODS:
+        return
+
+    submitted = (await request.form()).get(CSRF_FIELD)
+    expected = request.cookies.get(CSRF_COOKIE)
+    if not csrf_matches(submitted if isinstance(submitted, str) else None, expected):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(
+                "That form was missing its security token, or the token did not match. "
+                "Reload the page and try again."
+            ),
+        )

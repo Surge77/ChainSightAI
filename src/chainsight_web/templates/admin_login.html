@@ -11,6 +11,7 @@
     </p>
 
     <form class="stack card" method="post" action="/admin/login">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
       <label>
         Email
         <input type="email" name="email" autocomplete="username" required maxlength="320"

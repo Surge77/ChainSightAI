@@ -55,9 +55,14 @@ So `/admin/users` lets an administrator grant and revoke the role. The invariant
 actually mattered is untouched: **nobody grants themselves the role.** What still cannot
 happen there:
 
-- **Creating an account.** No password field, because an administrator who sets somebody
-  else's password knows it afterwards and every action by that account becomes deniable.
-  Operators register themselves; an administrator grants the role to an account that exists.
+- **Choosing somebody's password.** An administrator *can* create an account — waiting for a
+  colleague to register before you can give them access is the same bottleneck in a smaller
+  form. What they cannot do is pick the password. It is generated, shown once, and
+  `must_change_password` makes it good for exactly one sign-in; until the owner replaces it
+  the account reaches nothing but `/password`. That is the whole difference between a
+  password an administrator set and a password an administrator *knows*: without the hold,
+  the administrator's copy keeps working for the life of the account and every action by
+  that account is deniable.
 - **Removing the last administrator.** Refused whoever asks, because the result is an
   application with no way back in short of the command line, one click away on your own row.
   Self-demotion is allowed once somebody else holds the role: the rule is about what the
@@ -66,8 +71,7 @@ happen there:
   in the same commit, and the page shows them. The email addresses are stored on the row
   rather than joined, so the record stays legible after an account is deleted.
 
-**This raises the stakes of a gap `SECURITY.md` already lists.** There are no CSRF tokens,
-so the defence against a forged role change is `SameSite=Lax` alone — which does stop a
-cross-site form post from carrying the session, and is why this is defensible on localhost.
-It is no longer merely a cost-model edit behind that gap, and the CSRF entry in `TODO.md`
-now says so.
+**This raised the stakes of a gap `SECURITY.md` had listed since phase 0**, and that gap is
+now closed. The most valuable request behind it stopped being a cost-model edit and became
+`POST /admin/users/role`, which grants administrator. ADR [0010](0010-csrf-tokens.md) covers
+the tokens that answer it.

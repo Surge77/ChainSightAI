@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from chainsight_web.app import create_app
 from chainsight_web.config import Settings
 from chainsight_web.tables import Order, Prediction, User
-from conftest import OPERATOR, make_user, sign_in
+from conftest import OPERATOR, BrowserClient, make_user, sign_in
 
 
 def create(client: TestClient, order: dict[str, str]) -> int:
@@ -238,7 +238,7 @@ class TestWithoutAModel:
 
 def _client_without_a_model(
     tmp_path: Path, empty_artefacts: Path
-) -> tuple[TestClient, sessionmaker[Session]]:
+) -> tuple[BrowserClient, sessionmaker[Session]]:
     """An application whose artefacts directory has nothing promoted in it."""
     settings = Settings(
         session_secret="a-test-secret-that-is-not-used-anywhere-real",
@@ -246,7 +246,7 @@ def _client_without_a_model(
         artefacts=empty_artefacts,
     )
     app = create_app(settings)
-    client = TestClient(app, follow_redirects=False)
+    client = BrowserClient(app, follow_redirects=False)
     make_user(app.state.sessions, *OPERATOR)
     sign_in(client, OPERATOR)
     return client, app.state.sessions

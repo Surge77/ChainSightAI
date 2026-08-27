@@ -15,7 +15,9 @@ from __future__ import annotations
 import shutil
 from collections.abc import Iterator
 from pathlib import Path
+from typing import Any
 
+import httpx
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -25,7 +27,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from chainsight import persistence, registry, training
 from chainsight_web.app import create_app
 from chainsight_web.config import Settings
-from chainsight_web.security import hash_password
+from chainsight_web.security import CSRF_COOKIE, CSRF_FIELD, hash_password
 from chainsight_web.tables import User
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -88,9 +90,48 @@ def sessions(app: FastAPI) -> sessionmaker[Session]:
     return factory
 
 
+class BrowserClient(TestClient):
+    """A client that fills in the hidden CSRF field, the way a browser would.
+
+    Every form the application renders carries the token, so a test posting a form without
+    one is testing a submission no browser makes. Rather than repeat the field in sixty
+    call sites, this puts it in exactly where the rendered HTML would have.
+
+    A test that supplies its own `csrf_token` keeps it, so a test *about* the token can
+    still send a wrong one. `raw_client` skips this entirely.
+    """
+
+    #: Body arguments that mean the caller is not posting a form at all.
+    _OTHER_BODIES = ("json", "content", "files")
+
+    def post(  # type: ignore[override]
+        self, url: str, *, data: dict[str, str] | None = None, **kwargs: Any
+    ) -> httpx.Response:
+        # `data is None` is the case that matters: `client.post("/logout")` posts a form
+        # with no other fields, and an earlier version of this helper skipped it and spent
+        # a debugging session looking at the application instead.
+        if not any(key in kwargs for key in self._OTHER_BODIES):
+            fields: dict[str, str] = dict(data or {})
+            fields.setdefault(CSRF_FIELD, self._csrf_token())
+            data = fields
+        return super().post(url, data=data, **kwargs)
+
+    def _csrf_token(self) -> str:
+        if CSRF_COOKIE not in self.cookies:
+            self.get("/login")
+        return self.cookies[CSRF_COOKIE]
+
+
 @pytest.fixture
-def client(app: FastAPI) -> Iterator[TestClient]:
+def client(app: FastAPI) -> Iterator[BrowserClient]:
     """A client that does not follow redirects, so a test can assert where it was sent."""
+    with BrowserClient(app, follow_redirects=False) as running:
+        yield running
+
+
+@pytest.fixture
+def raw_client(app: FastAPI) -> Iterator[TestClient]:
+    """A client that adds nothing to a request. For the tests about CSRF itself."""
     with TestClient(app, follow_redirects=False) as running:
         yield running
 

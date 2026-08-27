@@ -7,6 +7,20 @@ All notable changes to this project are recorded here. The format follows
 ## [Unreleased]
 
 ### Added
+- **CSRF tokens on every state-changing request**, closing the first of the four gaps
+  `SECURITY.md` has listed as deliberately absent since phase 0. The check is a dependency
+  registered on the *application* rather than on individual routes, so a form added later is
+  covered without anybody remembering — and a form without a token fails closed, loudly, as
+  a 403 rather than silently as a hole. The token cookie is `HttpOnly` (nothing reads it
+  from script; the server renders the value into the HTML) and rotates when a session
+  starts, which is the CSRF half of session fixation. A test posts to every state-changing
+  route without a token and requires all of them to refuse, and a second test scans the
+  templates so a form without one is a build failure. See `docs/adr/0010-csrf-tokens.md`.
+- An administrator can create an account at `/admin/users`, but never choose its password.
+  One is generated, shown exactly once, and marked `must_change_password`: until the owner
+  replaces it the account reaches nothing but `/password`. That hold is the whole point — it
+  is the difference between a password an administrator *set* and a password an
+  administrator *knows*, and without it every action by that account stays deniable.
 - `/admin/users`: an administrator can grant and revoke the administrator role. ADR 0009 is
   amended rather than contradicted — its objections were to the role being *self*-granted
   (a registration checkbox, a first-user-wins race), and neither describes an existing

@@ -20,7 +20,13 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from chainsight_web.dependencies import current_user, get_service, get_session, require_user
+from chainsight_web.dependencies import (
+    CHANGE_PASSWORD_PATH,
+    current_user,
+    get_service,
+    get_session,
+    require_user,
+)
 from chainsight_web.schemas import OrderInput
 from chainsight_web.service import ModelService, ServiceError, categories_of, predict_for
 from chainsight_web.tables import ORDER_COLUMNS, Order, Prediction, User
@@ -64,9 +70,17 @@ _DATASET_NAME = {column: dataset for dataset, column in ORDER_COLUMNS.items()}
 
 @router.get("/")
 def home(user: Annotated[User | None, Depends(current_user)]) -> Response:
-    if user is not None:
-        return RedirectResponse("/orders", status_code=status.HTTP_303_SEE_OTHER)
-    return RedirectResponse("/login", status_code=status.HTTP_303_SEE_OTHER)
+    """Send each caller where they can actually go.
+
+    `current_user` rather than `require_user`, because this route has to answer for an
+    anonymous visitor too. That means the hold on a temporary password is checked here by
+    hand: without it this would send them to `/orders`, which would immediately bounce them
+    to `/password`, and a redirect through a page nobody sees is just a slower answer.
+    """
+    if user is None:
+        return RedirectResponse("/login", status_code=status.HTTP_303_SEE_OTHER)
+    landing = CHANGE_PASSWORD_PATH if user.must_change_password else "/orders"
+    return RedirectResponse(landing, status_code=status.HTTP_303_SEE_OTHER)
 
 
 @router.get("/orders")

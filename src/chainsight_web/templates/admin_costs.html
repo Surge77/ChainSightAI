@@ -23,6 +23,7 @@
   </div>
 
   <form class="stack wide card" method="post" action="/admin/costs">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
     <label>
       Cost of intervening
       <input type="number" name="intervention" step="0.01" min="0.01"

@@ -67,6 +67,11 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(320), unique=True, index=True)
     password_hash: Mapped[str] = mapped_column(String(128))
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
+    #: Set when an administrator created this account with a temporary password. Until the
+    #: owner replaces it, the account can reach nothing but the change-password page — which
+    #: is what keeps an administrator-set password from being a password the administrator
+    #: knows for as long as the account exists.
+    must_change_password: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
     orders: Mapped[list[Order]] = relationship(back_populates="owner")

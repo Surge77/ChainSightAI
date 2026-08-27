@@ -31,10 +31,12 @@
               <td>
                 {% if not version.is_live %}
                   <form class="inline" method="post" action="/admin/models/promote">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
                     <input type="hidden" name="version" value="{{ version.version }}" />
                     <button class="secondary" type="submit">Promote</button>
                   </form>
                   <form class="inline" method="post" action="/admin/models/promote">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
                     <input type="hidden" name="version" value="{{ version.version }}" />
                     <input type="hidden" name="force" value="true" />
                     <button class="link" type="submit">force</button>
@@ -58,6 +60,7 @@
       through the order form.
     </p>
     <form class="stack" method="post" action="/admin/models/retrain">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
       <label>
         Candidate
         <select name="model_name">

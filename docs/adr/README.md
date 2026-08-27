@@ -18,3 +18,4 @@ somebody does.
 | [0007](0007-json-registry.md) | A JSON registry with a compare-then-promote guard, not MLflow | accepted |
 | [0008](0008-server-rendered-sqlite.md) | Server-rendered pages over SQLite, not an SPA | accepted |
 | [0009](0009-no-default-session-secret.md) | No default session secret | accepted, amended for role management |
+| [0010](0010-csrf-tokens.md) | CSRF tokens, checked globally rather than per route | accepted |

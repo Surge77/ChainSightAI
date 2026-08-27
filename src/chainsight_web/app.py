@@ -12,7 +12,7 @@ is a policy nobody has thought about.
 
 from __future__ import annotations
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.exception_handlers import http_exception_handler
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
@@ -21,6 +21,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from chainsight_web import routes_accounts, routes_admin, routes_auth, routes_orders
 from chainsight_web.config import Settings
 from chainsight_web.database import build_engine, build_sessions, create_tables
+from chainsight_web.dependencies import verify_csrf
 from chainsight_web.service import ModelService
 from chainsight_web.templating import STATIC_DIR, render
 
@@ -36,7 +37,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     """Build an application against these settings, creating any missing tables."""
     settings = settings or Settings.from_env()
 
-    app = FastAPI(title=TITLE, description=DESCRIPTION)
+    # `verify_csrf` is registered on the application rather than on each route that needs
+    # it, so a form added later is protected without anybody remembering to protect it.
+    app = FastAPI(title=TITLE, description=DESCRIPTION, dependencies=[Depends(verify_csrf)])
     engine = build_engine(settings.database_url)
     create_tables(engine)
 
@@ -50,6 +53,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(routes_orders.router)
     app.include_router(routes_admin.router)
     app.include_router(routes_accounts.router)
+    app.include_router(routes_accounts.passwords)
     app.add_exception_handler(StarletteHTTPException, _html_errors)
     return app
 

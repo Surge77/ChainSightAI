@@ -19,6 +19,7 @@
     </div>
   {% else %}
     <form class="stack wide card" method="post" action="/orders/new">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
       {% for field, options in choices.items() %}
         <label>
           {{ labels[field] }}

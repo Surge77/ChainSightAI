@@ -65,11 +65,19 @@ Accordingly:
   default secret in a portfolio repo is a forged-session vulnerability with a public key.
 - The admin role is checked server-side on every admin route. It is never inferred from a
   form field, a cookie value, a query parameter, or a template variable.
+- Every state-changing request carries a CSRF token, checked by a dependency registered on
+  the application rather than on individual routes — so a form added later is protected
+  without anybody remembering to protect it. The token cookie is `HttpOnly`, and it rotates
+  when a session starts.
 - An administrator may grant and revoke the role at `/admin/users`, and every change writes
-  a `role_changes` row naming both parties. Nobody can grant themselves the role, no page
-  here sets another person's password, and the last administrator cannot be demoted. Making
-  the *first* administrator still requires `python -m chainsight_web init` on the server,
-  because there is nobody to authorise it.
+  a `role_changes` row naming both parties. Nobody can grant themselves the role and the
+  last administrator cannot be demoted. Making the *first* administrator still requires
+  `python -m chainsight_web init` on the server, because there is nobody to authorise it.
+- An administrator may create an account, but never choose its password. One is generated,
+  shown once, and marked `must_change_password`: it opens exactly one door, and that door is
+  the change-password page. Until the owner replaces it the account reaches nothing else.
+  This is what stops an administrator-set password from being a password the administrator
+  knows for the life of the account.
 - Administrators sign in at a separate page, `/admin/login`. It is a separate *door*, not a
   separate mechanism: same credential check, same signed cookie, same role read from the
   database. It cannot grant the role, and it answers a valid operator's credentials with the
@@ -89,13 +97,6 @@ Accordingly:
 ### What is not defended against
 
 Stated plainly so nobody assumes otherwise.
-
-**No CSRF tokens on form posts.** Session cookies are `SameSite=Lax`, which stops a
-cross-site *form* post from carrying the session, so the practical exposure is narrower than
-it sounds — but `Lax` is a mitigation and not a token, and a deployment facing anything but
-localhost needs the token. **This became more serious when role management moved into the
-UI:** the most valuable thing behind that gap is no longer a cost-model edit, it is
-`POST /admin/users/role`. It is the first thing to fix before this faces anything.
 
 **No brute-force lockout on login.** Nothing counts failed attempts or delays a repeat, so
 an attacker with a candidate list is limited only by bcrypt's own cost.

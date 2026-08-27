@@ -22,6 +22,8 @@ edit, and the signature only proves it has not been edited *since we issued it*.
 
 from __future__ import annotations
 
+import secrets
+
 import bcrypt
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 
@@ -38,6 +40,16 @@ SESSION_SALT = "chainsight-session"
 
 #: The cookie itself.
 COOKIE_NAME = "chainsight_session"
+
+#: The cookie carrying the CSRF token, and the form field that has to match it.
+CSRF_COOKIE = "chainsight_csrf"
+CSRF_FIELD = "csrf_token"
+
+#: 32 bytes of urandom. Long enough that guessing is not a strategy.
+CSRF_BYTES = 32
+
+#: Length of a generated temporary password, in urlsafe characters.
+TEMPORARY_PASSWORD_BYTES = 12
 
 
 class PasswordError(ValueError):
@@ -107,3 +119,36 @@ def read_session(cookie: str, *, secret: str, max_age: int) -> int | None:
         return None
     user_id = payload.get("user_id")
     return user_id if isinstance(user_id, int) else None
+
+
+def new_csrf_token() -> str:
+    """A fresh CSRF token. Random, and never derived from anything about the user.
+
+    Deriving it from the session would make it stable for the session's whole life, so one
+    leak — a token in a `Referer`, a screenshot, a copied URL — would last as long as the
+    login does. A per-token random value costs nothing and expires with the cookie.
+    """
+    return secrets.token_urlsafe(CSRF_BYTES)
+
+
+def csrf_matches(submitted: str | None, expected: str | None) -> bool:
+    """Whether a submitted token matches the one in the cookie.
+
+    `compare_digest` rather than `==`, so the comparison does not return early on the first
+    differing byte. That matters less here than for a password — an attacker who can time
+    this can usually just read the cookie — but a constant-time comparison is one line and
+    the alternative is explaining why it was safe to skip.
+    """
+    if not submitted or not expected:
+        return False
+    return secrets.compare_digest(submitted, expected)
+
+
+def temporary_password() -> str:
+    """A one-use password for an account an administrator created.
+
+    Generated rather than chosen. An administrator picking the password would pick a weak
+    one, would reuse it across the accounts they set up, and would have typed it — this is
+    at least random, and `must_change_password` makes it good for exactly one login.
+    """
+    return secrets.token_urlsafe(TEMPORARY_PASSWORD_BYTES)

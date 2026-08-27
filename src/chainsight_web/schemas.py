@@ -119,6 +119,39 @@ class Promotion(BaseModel):
     force: bool = False
 
 
+class NewAccount(BaseModel):
+    """An administrator creating an account for somebody else.
+
+    There is no password field and no role field. The password is generated so that nobody
+    chooses a weak one and the person is forced to replace it on first use; the role is
+    granted separately, through the control that writes an audit row.
+    """
+
+    email: str = Field(max_length=320)
+
+    @field_validator("email")
+    @classmethod
+    def looks_like_an_address(cls, value: str) -> str:
+        local, _, domain = value.partition("@")
+        if not local or "." not in domain:
+            raise ValueError("that does not look like an email address")
+        return value.lower()
+
+
+class NewPassword(BaseModel):
+    """Somebody replacing the temporary password they were given."""
+
+    password: str = Field(min_length=MIN_PASSWORD_LENGTH, max_length=72)
+    confirm: str = Field(max_length=72)
+
+    @field_validator("confirm")
+    @classmethod
+    def matches(cls, value: str, info: ValidationInfo) -> str:
+        if info.data.get("password") != value:
+            raise ValueError("the two passwords do not match")
+        return value
+
+
 class RoleAssignment(BaseModel):
     """One administrator changing another account's role.
 

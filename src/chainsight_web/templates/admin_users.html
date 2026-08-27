@@ -8,13 +8,38 @@
     {{ administrators }} of them administrator{{ "" if administrators == 1 else "s" }}.
   </p>
 
+  {% if issued %}
+    <div class="card issued">
+      <p class="figure-label">Temporary password for {{ issued_to }}</p>
+      <p class="issued-password">{{ issued }}</p>
+      <p class="figure-note">
+        <strong>Shown once.</strong> It is not stored anywhere readable and this page will not
+        show it again. It works for a single sign-in, after which {{ issued_to }} has to
+        choose their own — so it is not a password you will still know tomorrow.
+      </p>
+    </div>
+  {% endif %}
+
   <div class="card">
+    <h2 style="margin-top:0">Create an account</h2>
     <p>
-      There is no password field on this page, deliberately. An administrator who sets
-      somebody else's password knows it afterwards, and every action by that account becomes
-      deniable. People register themselves at <a href="/register">/register</a> as operators;
-      an administrator grants the role to an account that already exists.
+      The password is generated rather than chosen, shown once, and good for one sign-in.
+      An administrator who picks somebody's password knows it afterwards, and every action by
+      that account becomes deniable; a one-use password does not have that problem. People
+      can also register themselves at <a href="/register">/register</a>.
     </p>
+    <form class="stack" method="post" action="/admin/users/new">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+      <label>
+        Email
+        <input type="email" name="email" required maxlength="320"
+               placeholder="colleague@example.com" />
+      </label>
+      <div class="actions">
+        <button class="primary" type="submit">Create operator account</button>
+        <span class="caption">Grant the administrator role separately, below.</span>
+      </div>
+    </form>
     <p class="caption">
       The first administrator is the exception, and has to be, because there is nobody to
       grant it: <code>python -m chainsight_web init --email you@example.com</code> on the
@@ -43,6 +68,8 @@
             <td>
               {% if account.is_admin %}
                 <span class="priority priority-high">administrator</span>
+              {% elif account.must_change_password %}
+                <span class="caption">operator — password not yet replaced</span>
               {% else %}
                 <span class="caption">operator</span>
               {% endif %}
@@ -51,6 +78,7 @@
             <td><span class="caption">{{ account.created_at.strftime("%Y-%m-%d") }}</span></td>
             <td>
               <form class="inline" method="post" action="/admin/users/role">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
                 <input type="hidden" name="user_id" value="{{ account.id }}" />
                 <input type="hidden" name="make_admin"
                        value="{{ 'false' if account.is_admin else 'true' }}" />

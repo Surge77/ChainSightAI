@@ -24,13 +24,15 @@ from chainsight_web.dependencies import current_user, get_session, get_settings
 from chainsight_web.schemas import Credentials, Registration
 from chainsight_web.security import (
     COOKIE_NAME,
+    CSRF_COOKIE,
     MIN_PASSWORD_LENGTH,
     hash_password,
+    new_csrf_token,
     sign_session,
     verify_password,
 )
 from chainsight_web.tables import User
-from chainsight_web.templating import render
+from chainsight_web.templating import render, set_csrf_cookie
 
 router = APIRouter(tags=["auth"])
 
@@ -167,6 +169,7 @@ def register(
 def sign_out() -> Response:
     response = RedirectResponse("/", status_code=status.HTTP_303_SEE_OTHER)
     response.delete_cookie(COOKIE_NAME)
+    response.delete_cookie(CSRF_COOKIE)
     return response
 
 
@@ -186,6 +189,10 @@ def _signed_in(account: User, settings: Settings, *, landing: str = AFTER_LOGIN)
         httponly=True,
         samesite="lax",
     )
+    # A new session gets a new CSRF token. Carrying the old one across a login would let a
+    # token an attacker had already fixed in the browser keep working against the account
+    # that has just signed in, which is the CSRF half of session fixation.
+    set_csrf_cookie(response, new_csrf_token())
     return response
 
 
