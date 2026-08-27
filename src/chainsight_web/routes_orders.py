@@ -17,7 +17,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, Response, status
 from fastapi.responses import RedirectResponse
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from chainsight_web.dependencies import current_user, get_service, get_session, require_user
@@ -77,10 +77,10 @@ def list_orders(
 ) -> Response:
     """This operator's orders, ranked by what acting on them is worth."""
     orders = session.scalars(select(Order).where(Order.user_id == user.id)).all()
-    latest = {order.id: _latest_prediction(session, order.id) for order in orders}
+    latest = _latest_predictions(session, [order.id for order in orders])
 
     rows = sorted(
-        ((order, latest[order.id]) for order in orders),
+        ((order, latest.get(order.id)) for order in orders),
         key=lambda pair: pair[1].net_benefit if pair[1] else float("-inf"),
         reverse=True,
     )
@@ -163,6 +163,26 @@ def order_report(
         prediction=_latest_prediction(session, order.id),
         fields=_readable(order),
     )
+
+
+def _latest_predictions(session: Session, order_ids: list[int]) -> dict[int, Prediction]:
+    """The newest prediction for each of these orders, in two queries rather than N.
+
+    The obvious version of this loop asks for one order's newest prediction at a time,
+    which is one query per row on a page whose whole job is to show every row. `max(id)`
+    per order picks the same rows `_latest_prediction` would: ids are monotonic, so the
+    largest is the newest, and it does not tie the way a timestamp can.
+    """
+    if not order_ids:
+        return {}
+
+    newest = (
+        select(func.max(Prediction.id))
+        .where(Prediction.order_id.in_(order_ids))
+        .group_by(Prediction.order_id)
+    )
+    rows = session.scalars(select(Prediction).where(Prediction.id.in_(newest))).all()
+    return {row.order_id: row for row in rows}
 
 
 def _latest_prediction(session: Session, order_id: int) -> Prediction | None:

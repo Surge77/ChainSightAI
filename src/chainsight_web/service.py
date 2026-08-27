@@ -32,7 +32,15 @@ class ServiceError(RuntimeError):
 
 @dataclass
 class ModelService:
-    """The live artefact, loaded once and reloaded when the registry promotes another."""
+    """The live artefact, loaded once and reloaded when the registry promotes another.
+
+    One instance is shared by every request, and FastAPI runs synchronous handlers in a
+    threadpool, so `_cached` is touched from several threads at once. That is left
+    unsynchronised deliberately rather than by oversight: the worst a race can do here is
+    make two threads load the same promoted version at the same time and each store an
+    equivalent artefact. Both are correct, the second write replaces an identical value, and
+    a lock would cost every request to prevent a duplicated read nobody would notice.
+    """
 
     artefacts: Path
     _cached: tuple[int, persistence.Artefact] | None = field(default=None, repr=False)
@@ -100,8 +108,10 @@ def costs_in(session: Session) -> decision.CostModel:
     `docs/decision_engine.md` argues for, and an untouched installation should behave the
     way the document describes.
     """
+    # The id breaks the tie. Two edits saved in the same second have the same timestamp,
+    # and "whichever the database happened to return" is not a rule anybody can rely on.
     stored = session.scalars(
-        select(DecisionConfig).order_by(DecisionConfig.updated_at.desc())
+        select(DecisionConfig).order_by(DecisionConfig.updated_at.desc(), DecisionConfig.id.desc())
     ).first()
     if stored is None:
         return decision.CostModel()

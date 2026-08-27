@@ -140,10 +140,13 @@ class Manifest:
                 "in the wrong slot. Retrain rather than loading this."
             )
 
+        # Read once. Inside the comprehension this ran a fresh metadata lookup for every
+        # library, which is four times the work to answer one question.
+        installed = library_versions()
         drifted = {
-            name: (recorded, installed)
+            name: (recorded, installed.get(name, "absent"))
             for name, recorded in self.libraries.items()
-            if (installed := library_versions().get(name, "absent")) != recorded
+            if installed.get(name, "absent") != recorded
         }
         if drifted:
             detail = ", ".join(

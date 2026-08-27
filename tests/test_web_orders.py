@@ -10,8 +10,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlalchemy import select
+from sqlalchemy import event, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from chainsight_web.app import create_app
@@ -155,6 +156,34 @@ class TestNewOrder:
         self, client: TestClient, an_order: dict[str, str]
     ) -> None:
         assert client.post("/orders/new", data=an_order).headers["location"] == "/login"
+
+
+class TestQueryCount:
+    def test_listing_orders_does_not_query_once_per_order(
+        self, client: TestClient, app: FastAPI, operator: User, an_order: dict[str, str]
+    ) -> None:
+        """The page whose job is to show every row must not ask the database per row.
+
+        Pinned as a count rather than left to review, because an N+1 is invisible in the
+        output — the page renders correctly and simply costs more with every order added.
+        """
+        for total in ("20.00", "50.00", "99.00", "199.00", "499.95"):
+            create(client, {**an_order, "order_total": total})
+
+        statements: list[str] = []
+        engine = app.state.engine
+
+        def record(conn: object, cursor: object, statement: str, *rest: object) -> None:
+            statements.append(statement)
+
+        event.listen(engine, "before_cursor_execute", record)
+        try:
+            assert client.get("/orders").status_code == 200
+        finally:
+            event.remove(engine, "before_cursor_execute", record)
+
+        selects = [query for query in statements if query.lstrip().upper().startswith("SELECT")]
+        assert len(selects) <= 4, f"{len(selects)} selects for 5 orders"
 
 
 class TestOwnership:
