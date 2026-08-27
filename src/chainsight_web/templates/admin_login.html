@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Administrator sign in — ChainSight{% endblock %}
+
+{% block content %}
+  <div class="auth auth-admin">
+    <p class="auth-badge">Control tower</p>
+    <h1>Administrator sign in</h1>
+    <p class="lede">
+      Retraining, promoting a model and editing the cost model happen here. An operator
+      account cannot reach these pages.
+    </p>
+
+    <form class="stack card" method="post" action="/admin/login">
+      <label>
+        Email
+        <input type="email" name="email" autocomplete="username" required maxlength="320"
+               autofocus />
+      </label>
+      <label>
+        Password
+        <input type="password" name="password" autocomplete="current-password" required
+               maxlength="72" />
+      </label>
+      <div class="actions">
+        <button class="primary" type="submit">Sign in</button>
+        <a href="/login">Operator sign in</a>
+      </div>
+    </form>
+
+    <p class="auth-aside">
+      This form does not grant the administrator role and never has. It checks the role that
+      is already on the account, which is set by <code>python -m chainsight_web init</code>
+      on the server.
+    </p>
+  </div>
+{% endblock %}

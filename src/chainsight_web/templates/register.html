@@ -2,30 +2,37 @@
 {% block title %}Register — ChainSight{% endblock %}
 
 {% block content %}
-  <h1>Register</h1>
-  <p class="lede">
-    Registration creates an operator account. The administrator role is not something this
-    form can ask for; it is set on the account by an existing administrator.
-  </p>
+  <div class="auth">
+    <h1>Register</h1>
+    <p class="lede">
+      This creates an operator account: its own orders, and their predictions.
+    </p>
 
-  <form class="stack card" method="post" action="/register">
-    <label>
-      Email
-      <input type="email" name="email" autocomplete="username" required maxlength="320" />
-    </label>
-    <label>
-      Password
-      <input type="password" name="password" autocomplete="new-password" required
-             minlength="{{ min_password_length }}" maxlength="72" />
-      <span class="caption">
-        At least {{ min_password_length }} characters. There is no character-composition
-        rule: length is the part that costs an attacker time, and composition rules push
-        people towards shorter passwords they can remember.
-      </span>
-    </label>
-    <div class="actions">
-      <button class="primary" type="submit">Create account</button>
-      <a href="/login">I already have one</a>
-    </div>
-  </form>
+    <form class="stack card" method="post" action="/register">
+      <label>
+        Email
+        <input type="email" name="email" autocomplete="username" required maxlength="320"
+               autofocus />
+      </label>
+      <label>
+        Password
+        <input type="password" name="password" autocomplete="new-password" required
+               minlength="{{ min_password_length }}" maxlength="72" />
+        <span class="caption">
+          At least {{ min_password_length }} characters. There is no character-composition
+          rule: length is the part that costs an attacker time, and composition rules push
+          people towards shorter passwords they can remember.
+        </span>
+      </label>
+      <div class="actions">
+        <button class="primary" type="submit">Create account</button>
+        <a href="/login">I already have one</a>
+      </div>
+    </form>
+
+    <p class="auth-aside">
+      The administrator role is not a field on this form and cannot be asked for. It is set
+      on the server with <code>python -m chainsight_web init</code>.
+    </p>
+  </div>
 {% endblock %}

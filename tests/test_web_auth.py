@@ -181,6 +181,84 @@ class TestBranding:
         assert "currentColor" in body
 
 
+class TestAdministratorSignIn:
+    def test_an_administrator_lands_on_the_control_tower(
+        self, client: TestClient, sessions: sessionmaker[Session]
+    ) -> None:
+        make_user(sessions, *ADMIN, admin=True)
+
+        response = client.post("/admin/login", data={"email": ADMIN[0], "password": ADMIN[1]})
+
+        assert response.status_code == 303
+        assert response.headers["location"] == "/admin"
+        assert COOKIE_NAME in response.cookies
+
+    def test_an_operator_with_the_right_password_is_refused(
+        self, client: TestClient, sessions: sessionmaker[Session]
+    ) -> None:
+        """The form reads the role off the row. It has never been able to grant one."""
+        make_user(sessions, *OPERATOR)
+
+        response = client.post("/admin/login", data={"email": OPERATOR[0], "password": OPERATOR[1]})
+
+        assert response.status_code == 400
+        assert COOKIE_NAME not in response.cookies
+
+    def test_a_refused_operator_is_told_the_same_thing_as_a_wrong_password(
+        self, client: TestClient, sessions: sessionmaker[Session]
+    ) -> None:
+        """Otherwise this page is an oracle for which accounts are administrators.
+
+        Post a valid operator's credentials, read a different message from the one a bad
+        password gets, and you have learned both that the account exists and that it is not
+        an administrator.
+        """
+        make_user(sessions, *OPERATOR)
+
+        refused = client.post("/admin/login", data={"email": OPERATOR[0], "password": OPERATOR[1]})
+        wrong = client.post(
+            "/admin/login", data={"email": OPERATOR[0], "password": "not the password"}
+        )
+        unknown = client.post("/admin/login", data={"email": "nobody@example.com", "password": "x"})
+
+        assert refused.status_code == wrong.status_code == unknown.status_code == 400
+        assert REJECTED in refused.text
+        assert REJECTED in wrong.text
+        assert REJECTED in unknown.text
+
+    def test_signing_in_there_does_not_make_anybody_an_administrator(
+        self, client: TestClient, sessions: sessionmaker[Session]
+    ) -> None:
+        make_user(sessions, *OPERATOR)
+        client.post("/admin/login", data={"email": OPERATOR[0], "password": OPERATOR[1]})
+
+        with sessions() as session:
+            stored = session.scalars(select(User).where(User.email == OPERATOR[0])).one()
+
+        assert stored.is_admin is False
+
+    def test_the_form_renders_for_a_visitor(self, client: TestClient) -> None:
+        body = client.get("/admin/login").text
+
+        assert "Administrator sign in" in body
+        assert 'action="/admin/login"' in body
+
+    def test_a_signed_in_operator_is_sent_to_their_own_pages(
+        self, client: TestClient, operator: User
+    ) -> None:
+        """Not to a form. They are not missing a login."""
+        assert client.get("/admin/login").headers["location"] == "/orders"
+
+    def test_a_signed_in_administrator_is_sent_to_the_control_tower(
+        self, client: TestClient, admin: User
+    ) -> None:
+        assert client.get("/admin/login").headers["location"] == "/admin"
+
+    def test_the_two_doors_link_to_each_other(self, client: TestClient) -> None:
+        assert "/admin/login" in client.get("/login").text
+        assert '"/login"' in client.get("/admin/login").text
+
+
 class TestSignOut:
     def test_signing_out_ends_the_session(self, client: TestClient, operator: User) -> None:
         client.post("/logout")
@@ -232,11 +310,14 @@ class TestRoles:
         assert client.get(path).status_code == 403
 
     @pytest.mark.parametrize("path", ["/admin", "/admin/models", "/admin/costs"])
-    def test_a_visitor_is_sent_to_the_login_form(self, client: TestClient, path: str) -> None:
+    def test_a_visitor_is_sent_to_the_administrator_form(
+        self, client: TestClient, path: str
+    ) -> None:
+        """The door they wanted is the admin door, so that is the one they are shown."""
         response = client.get(path)
 
         assert response.status_code == 303
-        assert response.headers["location"] == "/login"
+        assert response.headers["location"] == "/admin/login"
 
     def test_the_role_comes_from_the_database_and_not_from_the_session(
         self, client: TestClient, operator: User, sessions: sessionmaker[Session]

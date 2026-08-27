@@ -10,43 +10,51 @@
     <link rel="stylesheet" href="{{ url_for('static', path='/chainsight.css') }}" />
   </head>
   <body>
+    {# The bars run the full width of the window; their *contents* sit in the same measure
+       as `main` and the footer. Without the inner wrapper the masthead starts at the window
+       edge while the page starts wherever centring puts it, which is three different left
+       edges on one screen. #}
     <header class="masthead">
-      {# The same mark as the tab icon, inlined rather than linked so that it can be drawn
-         in `currentColor` and the theme tokens — an <img> would keep its own colours and
-         look pasted on in dark mode. The knockout stroke is the masthead's own background,
-         which is what breaks one link where the other crosses it. #}
-      <a class="wordmark" href="/">
-        <svg class="mark" width="28" height="28" viewBox="0 0 32 32"
-             aria-hidden="true" focusable="false">
-          <circle cx="8.7" cy="16" r="6.2" fill="none" stroke="currentColor" stroke-width="2.6" />
-          <circle cx="23.3" cy="16" r="6.2" fill="none" stroke="var(--card)" stroke-width="5.4" />
-          <circle cx="23.3" cy="16" r="6.2" fill="none" stroke="var(--high)" stroke-width="2.6" />
-        </svg>
-        <span>ChainSight</span>
-      </a>
-      <nav>
-        {% if user %}
-          <a href="/orders">Orders</a>
-          <a href="/orders/new">New order</a>
-          {% if user.is_admin %}
-            <a href="/admin">Control tower</a>
-            <a href="/admin/models">Models</a>
-            <a href="/admin/costs">Cost model</a>
+      <div class="bar">
+        {# The same mark as the tab icon, inlined rather than linked so that it can be drawn
+           in `currentColor` and the theme tokens — an <img> would keep its own colours and
+           look pasted on in dark mode. The knockout stroke is the masthead's own background,
+           which is what bites a gap out of one link where the other meets it. #}
+        <a class="wordmark" href="/">
+          <svg class="mark" width="28" height="28" viewBox="0 0 32 32"
+               aria-hidden="true" focusable="false">
+            <circle cx="8.7" cy="16" r="6.2" fill="none" stroke="currentColor" stroke-width="2.6" />
+            <circle cx="23.3" cy="16" r="6.2" fill="none" stroke="var(--card)" stroke-width="5.4" />
+            <circle cx="23.3" cy="16" r="6.2" fill="none" stroke="var(--high)" stroke-width="2.6" />
+          </svg>
+          <span>ChainSight</span>
+        </a>
+        <nav>
+          {% if user %}
+            <a href="/orders">Orders</a>
+            <a href="/orders/new">New order</a>
+            {% if user.is_admin %}
+              <a href="/admin">Control tower</a>
+              <a href="/admin/models">Models</a>
+              <a href="/admin/costs">Cost model</a>
+            {% endif %}
+            <form class="inline" method="post" action="/logout">
+              <button type="submit" class="link">Sign out ({{ user.email }})</button>
+            </form>
+          {% else %}
+            <a href="/login">Sign in</a>
+            <a href="/register">Register</a>
           {% endif %}
-          <form class="inline" method="post" action="/logout">
-            <button type="submit" class="link">Sign out ({{ user.email }})</button>
-          </form>
-        {% else %}
-          <a href="/login">Sign in</a>
-          <a href="/register">Register</a>
-        {% endif %}
-      </nav>
+        </nav>
+      </div>
     </header>
 
-    <p class="disclaimer">
-      A production-shaped application on a historical benchmark dataset. It observes no real
-      shipments and predicts nothing that is actually in transit.
-    </p>
+    <div class="disclaimer">
+      <p class="bar">
+        A production-shaped application on a historical benchmark dataset. It observes no real
+        shipments and predicts nothing that is actually in transit.
+      </p>
+    </div>
 
     <main>
       {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}

@@ -16,6 +16,12 @@
   --high: #bb6b00;
   --monitor: #40618a;
   --low: #5c6670;
+
+  /* One measure and one gutter for the whole page. The masthead, the disclaimer, the
+     content and the footer all read from these, so there is exactly one left edge on
+     screen rather than one per band. */
+  --measure: 62rem;
+  --gutter: 1.25rem;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -43,17 +49,26 @@ body {
   font: 16px/1.55 "Charter", "Iowan Old Style", Georgia, serif;
 }
 
-main { max-width: 62rem; margin: 0 auto; padding: 1.5rem 1.25rem 4rem; }
+/* The shared column. `.bar` puts a full-width band's contents on the same edge. */
+.bar { max-width: var(--measure); margin: 0 auto; padding-inline: var(--gutter); }
+
+main {
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: 1.5rem var(--gutter) 4rem;
+}
 
 .masthead {
+  border-bottom: 1px solid var(--rule);
+  background: var(--card);
+}
+.masthead .bar {
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
-  padding: 1rem 1.25rem;
-  border-bottom: 1px solid var(--rule);
-  background: var(--card);
+  padding-block: 1rem;
 }
 
 .wordmark {
@@ -77,9 +92,14 @@ nav a:hover, .link:hover { text-decoration: underline; }
 button.link { background: none; border: 0; padding: 0; font: inherit; cursor: pointer; }
 
 .disclaimer {
-  margin: 0;
-  padding: 0.5rem 1.25rem;
   border-bottom: 1px solid var(--rule);
+}
+.disclaimer p {
+  /* `margin-block`, not `margin`. The shorthand would reset the `margin-inline: auto` that
+     `.bar` uses to centre this text on the same edge as everything else, and the banner
+     would sit flush to the window while the page sat in the middle. */
+  margin-block: 0;
+  padding-block: 0.5rem;
   color: var(--muted);
   font-size: 0.85rem;
 }
@@ -141,6 +161,51 @@ button.primary {
 button.secondary { font: inherit; padding: 0.4rem 0.9rem; border: 1px solid var(--rule); border-radius: 4px; background: var(--card); color: var(--ink); cursor: pointer; }
 .actions { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
 
+.auth {
+  max-width: 25rem;
+  margin: clamp(1.5rem, 6vh, 4rem) auto 0;
+}
+.auth h1,
+.auth .lede {
+  text-align: center;
+}
+.auth .lede {
+  margin-bottom: 1.25rem;
+}
+.auth form.stack {
+  max-width: none;
+  gap: 1rem;
+}
+.auth .actions {
+  justify-content: space-between;
+  margin-top: 0.25rem;
+}
+.auth .actions button.primary {
+  flex: 1;
+}
+.auth-aside {
+  margin: 1.25rem 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  text-align: center;
+}
+.auth-aside code {
+  font-size: 0.95em;
+  word-break: break-word;
+}
+/* The badge is the only thing that distinguishes the two doors at a glance. It is a label
+   rather than a different colour scheme: two auth pages that look like different products
+   invite somebody to wonder which one is the real one. */
+.auth-badge {
+  margin: 0 0 0.35rem;
+  text-align: center;
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
 .error, .notice {
   padding: 0.7rem 0.9rem;
   border-radius: 4px;
@@ -154,9 +219,9 @@ button.secondary { font: inherit; padding: 0.4rem 0.9rem; border: 1px solid var(
 .caption { color: var(--muted); font-size: 0.85rem; margin-top: 0.5rem; }
 
 footer {
-  max-width: 62rem;
+  max-width: var(--measure);
   margin: 0 auto;
-  padding: 1.25rem;
+  padding: 1.25rem var(--gutter);
   border-top: 1px solid var(--rule);
   color: var(--muted);
   font-size: 0.82rem;

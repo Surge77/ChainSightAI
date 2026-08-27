@@ -40,6 +40,9 @@ REJECTED = "That email and password do not match an account."
 #: Where a successful sign-in lands.
 AFTER_LOGIN = "/orders"
 
+#: Where a successful administrator sign-in lands.
+AFTER_ADMIN_LOGIN = "/admin"
+
 
 @router.get("/login")
 def login_form(request: Request, user: Annotated[User | None, Depends(current_user)]) -> Response:
@@ -55,19 +58,72 @@ def sign_in(
     session: Annotated[Session, Depends(get_session)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> Response:
+    account = _authenticate(session, credentials)
+    if account is None:
+        return render(request, "login.html", user=None, error=REJECTED, status_code=400)
+
+    return _signed_in(account, settings)
+
+
+@router.get("/admin/login")
+def admin_login_form(
+    request: Request, user: Annotated[User | None, Depends(current_user)]
+) -> Response:
+    """The administrator's door. A separate page, not a separate mechanism.
+
+    An operator who is already signed in is sent to their own pages rather than shown this
+    form: they are not missing a login, and offering them one here would invite them to go
+    looking for a second account.
+    """
+    if user is not None:
+        return RedirectResponse(
+            AFTER_ADMIN_LOGIN if user.is_admin else AFTER_LOGIN,
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+    return render(request, "admin_login.html", user=None)
+
+
+@router.post("/admin/login")
+def admin_sign_in(
+    request: Request,
+    credentials: Annotated[Credentials, Form()],
+    session: Annotated[Session, Depends(get_session)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> Response:
+    """Authenticate, then check the role that is already on the account.
+
+    Two properties matter more than the convenience of a separate page, and both are tested.
+
+    **This form cannot grant the role.** It reads `is_admin` from the row, exactly as
+    `require_admin` does on every request. Signing in here makes nobody an administrator.
+
+    **It says the same thing to a non-administrator as to a wrong password.** Otherwise the
+    page becomes an oracle: post a valid operator's credentials, read a different message,
+    and you have learned that the account exists and is not an administrator — and, by
+    elimination, which accounts are. No cookie is set on that path either, so a refused
+    operator leaves with exactly what they arrived with.
+    """
+    account = _authenticate(session, credentials)
+    if account is None or not account.is_admin:
+        return render(request, "admin_login.html", user=None, error=REJECTED, status_code=400)
+
+    return _signed_in(account, settings, landing=AFTER_ADMIN_LOGIN)
+
+
+def _authenticate(session: Session, credentials: Credentials) -> User | None:
+    """The account these credentials open, or `None`. Says nothing about which half failed.
+
+    `verify_password` is called against a dummy hash when the account is absent, so that a
+    missing account and a wrong password take about the same time. Timing is the other way
+    the two cases leak apart.
+    """
     account = session.scalars(
         select(User).where(User.email == credentials.email.strip().lower())
     ).first()
 
-    # `verify_password` is still called against a dummy hash when the account is absent, so
-    # that a missing account and a wrong password take about the same time. Timing is the
-    # other way the two cases leak apart.
     stored = account.password_hash if account else _DUMMY_HASH
     matched = verify_password(credentials.password, stored)
-    if account is None or not matched:
-        return render(request, "login.html", user=None, error=REJECTED, status_code=400)
-
-    return _signed_in(account, settings)
+    return account if account is not None and matched else None
 
 
 @router.get("/register")
@@ -114,7 +170,7 @@ def sign_out() -> Response:
     return response
 
 
-def _signed_in(account: User, settings: Settings) -> Response:
+def _signed_in(account: User, settings: Settings, *, landing: str = AFTER_LOGIN) -> Response:
     """Set the signed cookie and send the browser on.
 
     `httponly` because no script here needs to read it and a script that can read it is a
@@ -122,7 +178,7 @@ def _signed_in(account: User, settings: Settings) -> Response:
     cannot ride along on this session. `secure` is deliberately off: this application binds
     to localhost over plain HTTP, and a cookie marked secure would simply never be sent.
     """
-    response = RedirectResponse(AFTER_LOGIN, status_code=status.HTTP_303_SEE_OTHER)
+    response = RedirectResponse(landing, status_code=status.HTTP_303_SEE_OTHER)
     response.set_cookie(
         COOKIE_NAME,
         sign_session(account.id, secret=settings.session_secret),

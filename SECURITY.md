@@ -65,6 +65,11 @@ Accordingly:
   default secret in a portfolio repo is a forged-session vulnerability with a public key.
 - The admin role is checked server-side on every admin route. It is never inferred from a
   form field, a cookie value, a query parameter, or a template variable.
+- Administrators sign in at a separate page, `/admin/login`. It is a separate *door*, not a
+  separate mechanism: same credential check, same signed cookie, same role read from the
+  database. It cannot grant the role, and it answers a valid operator's credentials with the
+  same sentence it gives a wrong password — otherwise the page would be an oracle for which
+  accounts are administrators. No cookie is set on that path.
 - A user may read only their own orders and predictions. Ownership is filtered in the
   query, not asserted after the fetch.
 - Every input arriving from the browser is validated by a Pydantic model at the route

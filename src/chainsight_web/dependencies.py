@@ -28,6 +28,9 @@ from chainsight_web.tables import User
 #: Where an anonymous visitor is sent when the page they wanted needs a login.
 LOGIN_PATH = "/login"
 
+#: And where they are sent when the page they wanted needs an administrator.
+ADMIN_LOGIN_PATH = "/admin/login"
+
 
 def get_settings(request: Request) -> Settings:
     settings: Settings = request.app.state.settings
@@ -73,13 +76,24 @@ def require_user(user: Annotated[User | None, Depends(current_user)]) -> User:
     return user
 
 
-def require_admin(user: Annotated[User, Depends(require_user)]) -> User:
+def require_admin(user: Annotated[User | None, Depends(current_user)]) -> User:
     """An admin, checked against the database row rather than anything the browser sent.
 
-    A logged-in non-admin gets 403 rather than a redirect. They are not missing a login;
-    they are asking for something that is not theirs, and sending them to a login form
-    would invite them to try another account.
+    The two failure cases are deliberately different, because they are different situations.
+
+    An anonymous visitor is sent to the administrator sign-in form rather than the operator
+    one — they are simply not signed in, and the door they wanted is the admin door.
+
+    A signed-in non-admin gets 403, not a redirect. They are not missing a login; they are
+    asking for something that is not theirs, and sending them to a login form would invite
+    them to go looking for a second account.
     """
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_303_SEE_OTHER,
+            detail="this page needs an administrator login",
+            headers={"Location": ADMIN_LOGIN_PATH},
+        )
     if not user.is_admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

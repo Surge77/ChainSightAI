@@ -6,7 +6,20 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+- A separate administrator sign-in at `/admin/login`, and an anonymous visitor to an admin
+  page is now sent there rather than to the operator form. It is a separate door, not a
+  separate mechanism: the same credential check, the same signed cookie, and the same role
+  read from the database on every request. It cannot grant the role, and a valid operator's
+  credentials are refused with the *same* sentence a wrong password gets — a different one
+  would turn the page into an oracle for which accounts are administrators.
+
+### Changed
+- One measure for the whole page. The masthead and the disclaimer were full-bleed while the
+  content and footer were centred in a 62rem column, so a wide window showed three different
+  left edges. All four now read from `--measure` and `--gutter`.
+- The sign-in, registration and administrator pages get their own narrow centred column. A
+  login form stranded at the left of a 62rem measure looks lost on a wide screen.
 
 ## [1.0.0] - 2026-08-27
 

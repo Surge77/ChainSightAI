@@ -2,24 +2,31 @@
 {% block title %}Sign in — ChainSight{% endblock %}
 
 {% block content %}
-  <h1>Sign in</h1>
-  <p class="lede">
-    An operator account sees its own orders and their predictions, and nothing else.
-  </p>
+  <div class="auth">
+    <h1>Sign in</h1>
+    <p class="lede">
+      An operator account sees its own orders and their predictions, and nothing else.
+    </p>
 
-  <form class="stack card" method="post" action="/login">
-    <label>
-      Email
-      <input type="email" name="email" autocomplete="username" required maxlength="320" />
-    </label>
-    <label>
-      Password
-      <input type="password" name="password" autocomplete="current-password" required
-             maxlength="72" />
-    </label>
-    <div class="actions">
-      <button class="primary" type="submit">Sign in</button>
-      <a href="/register">Register instead</a>
-    </div>
-  </form>
+    <form class="stack card" method="post" action="/login">
+      <label>
+        Email
+        <input type="email" name="email" autocomplete="username" required maxlength="320"
+               autofocus />
+      </label>
+      <label>
+        Password
+        <input type="password" name="password" autocomplete="current-password" required
+               maxlength="72" />
+      </label>
+      <div class="actions">
+        <button class="primary" type="submit">Sign in</button>
+        <a href="/register">Register instead</a>
+      </div>
+    </form>
+
+    <p class="auth-aside">
+      Administrator? <a href="/admin/login">Sign in to the control tower</a>.
+    </p>
+  </div>
 {% endblock %}
