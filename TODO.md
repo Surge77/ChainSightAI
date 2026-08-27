@@ -3,47 +3,105 @@
 Things known to be missing, so a cold start does not rediscover them. Closed items move to
 `CHANGELOG.md` rather than being ticked here.
 
-## Next
+---
 
-- [ ] **Decision engine** - turn the probability and the known order value into one ranked
-      action, with the threshold derived from the cost of intervening rather than left at
-      0.5. Then persistence and the CLI, then the web app.
+## Where the project is
 
-- [ ] **Phase 8** — the margin regressor on `Order Item Profit Ratio`. Beat MAE 0.2930.
-      Only `LinearRegression`, `Ridge`, `Lasso` and `PolynomialFeatures` are available, so
-      the categorical block carrying the 0.1385 `Category Name` spread is where to look.
+Eleven phases merged to `main`, every one behind a green CI run on Python 3.11 and 3.12.
+**225 tests, `src/` at 100% line and branch coverage.** Tags: `v0.1.0`, `v0.2.0`, `v0.3.0`,
+`v0.4.0`.
+
+The ML core is finished and its findings are written down. What is missing is the
+application: persistence, a CLI, and the web app.
+
+### To pick it up again
+
+```bash
+cd C:/Users/tdmne/Desktop/ML/Projects/ChainSightAI
+.venv/Scripts/activate                  # the venv is already built
+python scripts/fetch_data.py --verify   # confirms the 92 MB source file is intact
+
+# the gate, green before any commit
+ruff check . && ruff format --check .
+pyright
+pytest -q --cov=src --cov-report=term-missing
+python scripts/check_taught.py
+python scripts/render_audit.py --check
+```
+
+Reproduce the headline numbers:
+
+```bash
+python scripts/report_baselines.py      # what every model is measured against
+python scripts/report_classifiers.py    # the fourteen-model comparison
+python -c "from chainsight import leakage; print(leakage.report('data/raw/DataCoSupplyChainDataset.csv'))"
+```
+
+Read `docs/results.md` first. It carries the findings, and two places where an earlier claim
+in this repository turned out to be wrong and was corrected next to the original.
+
+### The four findings, one line each
+
+1. **The published ~0.98 on this dataset is a leak.** With the post-dispatch columns a
+   depth-5 tree scores **1.0000**; without them, 0.6956.
+2. **The profit column leaks too, and quietly.** `Order Profit Per Order / Order Item Total`
+   *is* the regression target. A linear model given the profit column alone reaches R²
+   0.1938, which reads as a mediocre model rather than an alarm.
+3. **The margin ratio cannot be predicted by anything.** An oracle allowed to cheat reaches
+   R² 0.0036, so the product computes expected profit rather than modelling it.
+4. **Accuracy and F1 were the wrong metrics.** On average precision the models beat the rule
+   baseline by 0.069 — 0.8215 against 0.7528 — which both hid completely.
+
+---
+
+## Next, in dependency order
+
+- [ ] **Phase 11 — persistence, registry and CLI.** A joblib artefact carrying the fitted
+      `FeatureSpace` and estimator plus a manifest (library versions, feature-set hash,
+      dataset hash), a JSON model registry, and `python -m chainsight` with `describe`,
+      `leakage`, `compare`, `train` and `predict`. The web app cannot load anything until
+      this exists. `SECURITY.md` already states the loader must refuse a path resolving
+      outside the artefacts directory — implement that, do not just keep the sentence.
+- [ ] **Phase 12–13 — FastAPI, SQLite, auth, operator pages.** Worth doing on one branch to
+      save CI cycles. Tables: `users`, `orders`, `predictions`, `model_versions`,
+      `training_runs`, `decision_config`. Jinja2 templates, Chart.js from a CDN. The report
+      page renders a `decision.Decision` directly, so start from that dataclass.
+- [ ] **Phase 14 — admin control tower.** KPIs, charts, model registry page, retrain behind a
+      compare-then-promote guard. **The charts must not imply signal that is not there** —
+      regional late rate varies by about five points around the base rate, not the 72/48/34
+      an earlier draft of this project imagined.
+- [ ] **Phase 10, deferred — counterfactual explanations.** Re-predict with one controllable
+      field changed and report the delta. Deliberately below the web app; the most droppable
+      piece in the plan.
+- [ ] **Phase 15 — model card, data card, glossary, architecture, ADRs, `v1.0.0`.**
 
 ## Questions raised and not settled
 
-- [ ] **The probability ordering is inverted in the middle of the range.** Orders scored
-      0.78 are late 45% of the time; orders scored 0.65 are late 81% of the time. Ranking
-      by predicted risk is the product, so this is a defect rather than a curiosity.
-      `CalibratedClassifierCV` is outside the curriculum; a hand-rolled isotonic or binned
-      recalibration is not, and is worth doing before the decision engine multiplies these
-      numbers by money.
-- [ ] No taught model clears both baselines at any threshold. Decide for the model card
-      whether ChainSight ships the shipping-mode rule as the production model and presents
-      the classifiers as the evidence for that choice - which is currently the honest
-      reading of the table.
-- [ ] The depth-5 tree in the leakage demo scores 0.6956, matching the shipping-mode rule
-      to four decimals; the *tuned* tree scores 0.5972. Read both fitted trees and confirm
-      the first is the rule and the second is overfitting.
-- [ ] Product identity may be worth dropping entirely. Fitted before 2017 and applied
-      after, `Product Name` is unseen on 19.56% of rows and `Category Name` on 17.38%.
-      A feature that is absent for a fifth of the future is a liability; measure whether
-      keeping it beats dropping it before assuming either.
 - [ ] Whether to train with `exclude_cancelled=True`. The 7,754 cancelled shipments are
-      labelled not-late because they never went, which is label noise rather than an
-      on-time delivery. Excluding them moves the late rate 0.5483 -> 0.5729. Measure the
-      effect on held-out scores in phase 7 and then choose, rather than choosing now.
-- [ ] First Class with any payment type other than TRANSFER is late on all 19,997 rows.
-      That is a fingerprint of synthetic generation. Decide whether the model card should
-      cap its claims accordingly, or whether the subgroup should be reported separately.
-- [ ] `Order Country` has 164 levels under LabelEncoder. Measure what that costs the linear
-      models before assuming the trade-off named in the audit is the right one.
-- [ ] The 500-row sample's late rate is 0.5800 against the population's 0.5483, from
-      rounding in the per-cell allocation. Harmless for tests; do not quote it as a
-      dataset statistic anywhere.
+      labelled not-late because they never went, which is label noise rather than an on-time
+      delivery. Excluding them moves the late rate 0.5483 → 0.5729. Measure the effect on
+      held-out scores and then choose.
+- [ ] Product identity may be worth dropping entirely. Fitted before 2017 and applied after,
+      `Product Name` is unseen on 19.56% of rows and `Category Name` on 17.38%. A feature
+      absent for a fifth of the future is a liability; measure whether keeping it beats
+      dropping it.
+- [ ] First Class with any payment type other than TRANSFER is late on **all 19,997 rows**.
+      That is a fingerprint of synthetic generation and should cap what the model card claims
+      about what the model learned.
+- [ ] The depth-5 tree in the leakage demo scores 0.6956, matching the shipping-mode rule to
+      four decimals; the *tuned* tree scores 0.5972. Read both fitted trees and confirm the
+      first is the rule and the second is overfitting.
+- [ ] The model card has to explain that the production model is chosen on **ranking** rather
+      than accuracy, and that on accuracy alone the shipping-mode rule is within a point of
+      everything in the table.
+- [ ] `Order Country` has 164 levels. One-hot with `min_frequency=50` handles it now, but
+      what integer codes cost the linear models was never separately measured.
+- [ ] The 500-row committed sample's late rate is 0.5800 against the population's 0.5483,
+      from rounding in the per-cell allocation. Harmless for tests; never quote it as a
+      dataset statistic.
+- [ ] The decision engine's costs are assumptions with no empirical basis in this dataset.
+      `docs/decision_engine.md` argues each one, and the documentation must keep saying they
+      are assumptions.
 
 ## Security, before this faces anything but localhost
 
@@ -54,19 +112,8 @@ Named in `SECURITY.md` as deliberately absent. All four are required for a real 
 - [ ] An audit log of admin actions — promotions, retrains, config changes.
 - [ ] A guard against an operator poisoning the retraining set through the UI.
 
-## Methodology, deferred on purpose
-
-- [ ] Probability calibration is reported (decile reliability table) but never corrected.
-      `CalibratedClassifierCV` is outside the curriculum; a hand-rolled isotonic fit would
-      be inside it, and is worth doing once the honest baseline exists.
-- [ ] Group-aware splitting. The time-aware split does not prevent the same customer
-      appearing either side of the boundary. Whether that matters here is an open question
-      and should be measured, not assumed.
-- [ ] The decision engine's late-delivery penalty is a configurable guess. It has no
-      empirical basis in this dataset and the documentation must keep saying so.
-
 ## Deferred infrastructure
 
-- [ ] Dockerfile and compose (phase 16).
+- [ ] Dockerfile and compose.
 - [ ] Postgres. SQLite is sufficient for a single-node portfolio deployment and the schema
       is written to survive the swap.

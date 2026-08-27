@@ -108,8 +108,8 @@ is. Every phase is a branch, a pull request and a tag.
 | 7 — the classification registry | done (`v0.3.0`) |
 | 8 — the margin model, and the oracle ceiling | done |
 | 9 — ranking metrics, one-hot, declared models | done |
-| 10 — decision engine | next |
-| 11 — persistence and CLI | pending |
+| 10 — decision engine | done (`v0.4.0`) |
+| 11 — persistence and CLI | next |
 | 12–14 — FastAPI service, operator pages, control tower | pending |
 | 15 — model card, ADRs, release | pending |
 
@@ -144,7 +144,7 @@ exist.
 | [`docs/data_audit.md`](docs/data_audit.md) | All 53 columns: available at order time, or not, and why | **done** |
 | [`docs/leakage.md`](docs/leakage.md) | The two leaks, and what removing them costs | **done** |
 | [`docs/results.md`](docs/results.md) | Baselines first, then every model against them | **done** |
-| `docs/decision_engine.md` | The cost model, and every assumption in it | phase 9 |
+| [`docs/decision_engine.md`](docs/decision_engine.md) | The cost model, and every assumption in it | **done** |
 | `docs/model_card.md` | Intended use, known weaknesses, what this must not be used for | phase 15 |
 | `docs/architecture.md` | How the pieces fit | phase 15 |
 | `docs/adr/` | Why the load-bearing decisions were made | phase 15 |

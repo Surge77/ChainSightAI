@@ -83,6 +83,12 @@ All notable changes to this project are recorded here. The format follows
   defect: the worst gap falls from 0.334 to 0.122 and the probability ordering, previously
   inverted between 0.6 and 0.9, is now monotone.
 
+- `src/chainsight/decision.py` and `docs/decision_engine.md`: the cost model, the derived
+  threshold and the priority bands. The threshold works out at 0.2966 rather than 0.5,
+  because on these costs a missed late delivery is a little over twice as expensive as an
+  unnecessary intervention. Ranking is by net benefit, so a 499.95 order at 85% risk
+  outranks a 20.00 order at 90%.
+
 ### Changed
 - `scripts/check_taught.py` now labels rather than blocks. A third tier, `DECLARED`, holds
   names from outside the course material, each carrying the measurement that justified it,
