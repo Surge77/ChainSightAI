@@ -111,9 +111,19 @@ class TestResolve:
             persistence.resolve("../../etc/passwd", directory=tmp_path)
 
     def test_an_absolute_path_is_refused(self, tmp_path: Path) -> None:
-        """A caller cannot ask for a file elsewhere by spelling out where it is."""
+        """A caller cannot ask for a file elsewhere by spelling out where it is.
+
+        The path is built from `tmp_path` rather than written as a literal. An earlier
+        version of this test used `C:/Windows/System32/config`, which is absolute only on
+        Windows — everywhere else it is an ordinary relative name that resolves happily
+        *inside* the artefacts directory, so the test passed on the author's machine by not
+        testing anything and failed on CI. A test for a path escaping a root has to build
+        the escaping path from the root it is escaping.
+        """
+        elsewhere = tmp_path.parent / "somewhere-else"
+
         with pytest.raises(UnsafePathError, match="outside"):
-            persistence.resolve("C:/Windows/System32/config", directory=tmp_path)
+            persistence.resolve(str(elsewhere), directory=tmp_path)
 
     def test_the_default_directory_is_used_when_none_is_given(self) -> None:
         assert persistence.resolve("model").parent == persistence.ARTEFACTS_DIR.resolve()
