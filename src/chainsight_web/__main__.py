@@ -25,21 +25,45 @@ from chainsight_web.tables import User
 _DESCRIPTION = "Create the first administrator, or run the ChainSight application."
 
 
-def init(args: argparse.Namespace) -> int:
-    """Create an account, or promote an existing one to administrator."""
-    app = create_app(Settings.from_env())
-    password = args.password or getpass.getpass("password: ")
+def _read_password(supplied: str) -> str | None:
+    """The supplied password, or a prompted one; None when it is too short to accept."""
+    password = supplied or getpass.getpass("password: ")
     if not is_strong_enough(password):
         print(f"a password needs at least {MIN_PASSWORD_LENGTH} characters", file=sys.stderr)
-        return 1
+        return None
+    return password
 
+
+def init(args: argparse.Namespace) -> int:
+    """Create an account, promote an existing one, or reset the password on one."""
+    app = create_app(Settings.from_env())
     email = args.email.strip().lower()
+
     with app.state.sessions() as session:
         existing = session.scalars(select(User).where(User.email == email)).first()
-        if existing is not None:
+
+        # The lookup happens before the password is read, and that ordering is the whole
+        # point. Reading first meant an existing account was asked for a password that was
+        # then dropped on the floor, under a message that read like success — so somebody
+        # locked out of an account ran this, typed a new password, and believed it worked.
+        if existing is not None and not args.reset_password:
             existing.is_admin = args.admin
             session.commit()
-            print(f"{email} already existed; is_admin is now {existing.is_admin}")
+            print(
+                f"{email} already existed; is_admin is now {existing.is_admin}. "
+                "Its password is unchanged — pass --reset-password to set a new one."
+            )
+            return 0
+
+        password = _read_password(args.password)
+        if password is None:
+            return 1
+
+        if existing is not None:
+            existing.password_hash = hash_password(password)
+            existing.is_admin = args.admin
+            session.commit()
+            print(f"{email} already existed; password reset, is_admin is now {existing.is_admin}")
             return 0
 
         session.add(User(email=email, password_hash=hash_password(password), is_admin=args.admin))
@@ -70,6 +94,11 @@ def build_parser() -> argparse.ArgumentParser:
     created = subcommands.add_parser("init", help="create the first administrator")
     created.add_argument("--email", required=True)
     created.add_argument("--password", default="", help="prompted for when omitted")
+    created.add_argument(
+        "--reset-password",
+        action="store_true",
+        help="replace the password on an account that already exists",
+    )
     created.add_argument(
         "--operator",
         dest="admin",
