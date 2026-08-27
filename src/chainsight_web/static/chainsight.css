@@ -1,0 +1,152 @@
+/* One stylesheet, no framework.
+
+   The palette is deliberately quiet. A control tower that renders every number in a
+   different colour teaches an operator to ignore colour, and the only thing that should
+   carry colour here is priority -- which is the one signal the page exists to convey. */
+
+:root {
+  --ink: #16191d;
+  --paper: #f7f7f5;
+  --card: #ffffff;
+  --rule: #dcdcd6;
+  --muted: #63676d;
+  --accent: #1f4e79;
+
+  --critical: #9b2226;
+  --high: #bb6b00;
+  --monitor: #40618a;
+  --low: #5c6670;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #e7e7e3;
+    --paper: #16181b;
+    --card: #1e2126;
+    --rule: #33383f;
+    --muted: #9aa0a8;
+    --accent: #7fb0e0;
+
+    --critical: #f07a7e;
+    --high: #e0a044;
+    --monitor: #8fb4e0;
+    --low: #9aa0a8;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 16px/1.55 "Charter", "Iowan Old Style", Georgia, serif;
+}
+
+main { max-width: 62rem; margin: 0 auto; padding: 1.5rem 1.25rem 4rem; }
+
+.masthead {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--rule);
+  background: var(--card);
+}
+
+.wordmark { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.01em; text-decoration: none; color: var(--ink); }
+nav { display: flex; flex-wrap: wrap; gap: 1rem; align-items: baseline; }
+nav a, .link { color: var(--accent); text-decoration: none; }
+nav a:hover, .link:hover { text-decoration: underline; }
+.inline { display: inline; }
+button.link { background: none; border: 0; padding: 0; font: inherit; cursor: pointer; }
+
+.disclaimer {
+  margin: 0;
+  padding: 0.5rem 1.25rem;
+  border-bottom: 1px solid var(--rule);
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
+h1 { font-size: 1.7rem; margin: 0 0 0.35rem; }
+h2 { font-size: 1.2rem; margin: 2rem 0 0.5rem; }
+.lede { color: var(--muted); margin: 0 0 1.5rem; }
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 1.1rem 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); }
+
+.figure { font: 600 1.9rem/1.1 ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+.figure-label { color: var(--muted); font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.06em; }
+.figure-note { color: var(--muted); font-size: 0.85rem; margin-top: 0.35rem; }
+
+table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+th, td { text-align: left; padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--rule); }
+th { color: var(--muted); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; }
+td.number, th.number { text-align: right; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+.scroll { overflow-x: auto; }
+
+.priority { font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; font-size: 0.8rem; }
+.priority-critical { color: var(--critical); }
+.priority-high { color: var(--high); }
+.priority-monitor { color: var(--monitor); }
+.priority-low { color: var(--low); }
+
+form.stack { display: grid; gap: 0.9rem; max-width: 34rem; }
+form.wide { max-width: none; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); }
+/* `align-content: start` keeps the input at the top of its grid cell. Without it a label
+   whose caption runs to two lines stretches its row, and the input beside it floats down
+   to the bottom -- which reads as a misaligned form rather than as a longer caption. */
+label { display: grid; gap: 0.25rem; font-size: 0.9rem; align-content: start; }
+input, select {
+  font: inherit;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: var(--paper);
+  color: var(--ink);
+}
+button.primary {
+  font: inherit;
+  padding: 0.5rem 1.1rem;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+}
+button.secondary { font: inherit; padding: 0.4rem 0.9rem; border: 1px solid var(--rule); border-radius: 4px; background: var(--card); color: var(--ink); cursor: pointer; }
+.actions { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
+
+.error, .notice {
+  padding: 0.7rem 0.9rem;
+  border-radius: 4px;
+  border: 1px solid var(--rule);
+  margin: 0 0 1.25rem;
+}
+.error { border-color: var(--critical); color: var(--critical); }
+.notice { border-color: var(--accent); color: var(--accent); }
+
+.chart { max-width: 100%; }
+.caption { color: var(--muted); font-size: 0.85rem; margin-top: 0.5rem; }
+
+footer {
+  max-width: 62rem;
+  margin: 0 auto;
+  padding: 1.25rem;
+  border-top: 1px solid var(--rule);
+  color: var(--muted);
+  font-size: 0.82rem;
+  display: grid;
+  gap: 0.2rem;
+}

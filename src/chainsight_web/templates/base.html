@@ -1,0 +1,50 @@
+{# The one layout. Everything else fills `content`, so the navigation and the "this is not
+   a live system" banner cannot be forgotten on a page. #}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}ChainSight{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/chainsight.css') }}" />
+  </head>
+  <body>
+    <header class="masthead">
+      <a class="wordmark" href="/">ChainSight</a>
+      <nav>
+        {% if user %}
+          <a href="/orders">Orders</a>
+          <a href="/orders/new">New order</a>
+          {% if user.is_admin %}
+            <a href="/admin">Control tower</a>
+            <a href="/admin/models">Models</a>
+            <a href="/admin/costs">Cost model</a>
+          {% endif %}
+          <form class="inline" method="post" action="/logout">
+            <button type="submit" class="link">Sign out ({{ user.email }})</button>
+          </form>
+        {% else %}
+          <a href="/login">Sign in</a>
+          <a href="/register">Register</a>
+        {% endif %}
+      </nav>
+    </header>
+
+    <p class="disclaimer">
+      A production-shaped application on a historical benchmark dataset. It observes no real
+      shipments and predicts nothing that is actually in transit.
+    </p>
+
+    <main>
+      {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+      {% if notice %}<p class="notice">{{ notice }}</p>{% endif %}
+      {% block content %}{% endblock %}
+    </main>
+
+    <footer>
+      <span>Late-delivery risk is predicted from the sixteen fields known before dispatch.</span>
+      <span>The thirty-seven columns that only exist afterwards are dropped at ingest.</span>
+    </footer>
+    {% block scripts %}{% endblock %}
+  </body>
+</html>

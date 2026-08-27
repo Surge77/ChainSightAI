@@ -12,6 +12,9 @@ artifacts/
 *.db
 *.sqlite3
 
+# Screenshots taken while checking the web app in a browser
+.playwright-mcp/
+
 # Python
 __pycache__/
 *.py[cod]

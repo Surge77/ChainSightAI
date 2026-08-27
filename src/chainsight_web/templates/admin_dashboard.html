@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui %}
+{% block title %}Control tower — ChainSight{% endblock %}
+
+{% block content %}
+  <h1>Control tower</h1>
+  <p class="lede">
+    {% if live %}
+      Serving registry version {{ live.version }} — {{ live.model_name }}.
+    {% else %}
+      Nothing is promoted, so nothing is being scored. <a href="/admin/models">Train a model</a>.
+    {% endif %}
+  </p>
+
+  <div class="grid">
+    <div class="card">
+      <p class="figure-label">Orders</p>
+      <p class="figure">{{ summary.orders }}</p>
+      <p class="figure-note">{{ summary.scored }} of them scored.</p>
+    </div>
+    <div class="card">
+      <p class="figure-label">Flagged</p>
+      <p class="figure">{{ "%.0f%%"|format(summary.flagged_share * 100) }}</p>
+      <p class="figure-note">
+        {{ summary.flagged }} above the derived threshold. At a threshold of 0.5 this number
+        would be smaller and the misses would cost more than the false alarms saved.
+      </p>
+    </div>
+    <div class="card">
+      <p class="figure-label">Value at risk</p>
+      <p class="figure">{{ "%.2f"|format(summary.value_at_risk) }}</p>
+      <p class="figure-note">Summed exposure across the latest score for each order.</p>
+    </div>
+    <div class="card">
+      <p class="figure-label">Worth acting on</p>
+      <p class="figure">{{ "%.2f"|format(summary.net_benefit_available) }}</p>
+      <p class="figure-note">
+        Exposure less the cost of intervening, counting only orders where that is positive.
+      </p>
+    </div>
+  </div>
+
+  <h2>Priority mix</h2>
+  <div class="card">
+    {% if summary.priorities %}
+      <table>
+        <thead><tr><th>Priority</th><th class="number">Orders</th></tr></thead>
+        <tbody>
+          {% for name in ["critical", "high", "monitor", "low"] %}
+            <tr>
+              <td><span class="priority priority-{{ name }}">{{ name }}</span></td>
+              <td class="number">{{ summary.priorities.get(name, 0) }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <p class="caption">
+        Priority is net benefit, not probability. A typical order in this catalogue cannot
+        reach critical however risky it is, because every order is under 500 and the fixed
+        goodwill penalty is the larger half of a typical exposure.
+      </p>
+    {% else %}
+      <p>No scored orders yet.</p>
+    {% endif %}
+  </div>
+
+  <h2>Mean predicted risk by shipping mode</h2>
+  <div class="card">
+    <canvas id="by-mode" class="chart" height="140"></canvas>
+    <p class="caption">
+      Predicted risk on the orders entered here — not an observed late rate. Shipping mode is
+      the one field with a wide spread in this dataset: the audit measured 57 points across
+      its four values, against 0.9 for market.
+    </p>
+    {{ ui.group_table(summary.by_shipping_mode, noisy_below) }}
+  </div>
+
+  <h2>Mean predicted risk by region</h2>
+  <div class="card">
+    <canvas id="by-region" class="chart" height="200"></canvas>
+    <p class="caption">
+      The axis runs from zero to one deliberately. Regional late rate on this dataset varies
+      by about five points around a base rate of 0.5483, and an axis cropped to the data
+      would turn that into a dramatic-looking chart of almost nothing.
+    </p>
+    {{ ui.group_table(summary.by_region, noisy_below) }}
+  </div>
+{% endblock %}
+
+
+{% block scripts %}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script>
+    // The y-axis is pinned to [0, 1] on both charts. Letting Chart.js autoscale would crop
+    // it to the data and make a five-point spread look like a cliff, which is the exact
+    // misreading this dashboard is written to avoid.
+    const bar = (id, labels, values) => {
+      const canvas = document.getElementById(id);
+      if (!canvas || labels.length === 0) return;
+      new Chart(canvas, {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [{ label: "mean predicted risk", data: values, backgroundColor: "#40618a" }],
+        },
+        options: {
+          indexAxis: "y",
+          plugins: { legend: { display: false } },
+          scales: { x: { min: 0, max: 1, title: { display: true, text: "predicted probability" } } },
+        },
+      });
+    };
+
+    bar(
+      "by-mode",
+      {{ summary.by_shipping_mode | map(attribute="label") | list | tojson }},
+      {{ summary.by_shipping_mode | map(attribute="mean_probability") | list | tojson }}
+    );
+    bar(
+      "by-region",
+      {{ summary.by_region | map(attribute="label") | list | tojson }},
+      {{ summary.by_region | map(attribute="mean_probability") | list | tojson }}
+    );
+  </script>
+{% endblock %}

@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Cost model — ChainSight{% endblock %}
+
+{% block content %}
+  <h1>Cost model</h1>
+  <p class="lede">
+    None of these numbers is learned. The dataset records no intervention, no penalty and no
+    customer response, so every field below is a business assumption — somebody's stated
+    judgement, dated and attributed, rather than a constant that arrived from nowhere.
+    <a href="https://github.com/Surge77/ChainSightAI/blob/main/docs/decision_engine.md">
+      The document argues each one.</a>
+  </p>
+
+  <div class="card">
+    <p class="figure-label">Threshold these costs imply</p>
+    <p class="figure">{{ "%.4f"|format(costs.threshold) }}</p>
+    <p class="figure-note">
+      Not 0.5. A threshold of a half assumes an unnecessary intervention and a missed late
+      delivery cost the same; on these numbers the miss costs
+      {{ "%.1f"|format(costs.late_cost(costs.typical_order_value) / costs.intervention) }}
+      times as much. Changing any field below moves this number.
+    </p>
+  </div>
+
+  <form class="stack wide card" method="post" action="/admin/costs">
+    <label>
+      Cost of intervening
+      <input type="number" name="intervention" step="0.01" min="0.01"
+             value="{{ costs.intervention }}" required />
+      <span class="caption">Expedite, call the carrier, warn the customer. Default {{ defaults.intervention }}.</span>
+    </label>
+    <label>
+      Share of margin lost when late
+      <input type="number" name="margin_lost_when_late" step="0.01" min="0" max="1"
+             value="{{ costs.margin_lost_when_late }}" required />
+      <span class="caption">Default {{ defaults.margin_lost_when_late }}.</span>
+    </label>
+    <label>
+      Fixed penalty when late
+      <input type="number" name="fixed_penalty_when_late" step="0.01" min="0"
+             value="{{ costs.fixed_penalty_when_late }}" required />
+      <span class="caption">
+        Goodwill and support, which does not scale with order size. Default
+        {{ defaults.fixed_penalty_when_late }} — and on a typical order in this catalogue it
+        is the larger half of the exposure.
+      </span>
+    </label>
+    <label>
+      Mean margin ratio
+      <input type="number" name="mean_margin" step="0.0001" min="0" max="1"
+             value="{{ costs.mean_margin }}" required />
+      <span class="caption">
+        Measured on the training slice, not assumed: {{ defaults.mean_margin }}. Nothing can
+        predict the ratio itself, so expected profit is this times a known order total.
+      </span>
+    </label>
+    <label>
+      Typical order value
+      <input type="number" name="typical_order_value" step="0.01" min="0.01"
+             value="{{ costs.typical_order_value }}" required />
+      <span class="caption">The order the threshold is calibrated against. Measured: {{ defaults.typical_order_value }}.</span>
+    </label>
+    <label>
+      Critical above
+      <input type="number" name="critical_above" step="0.01" value="{{ costs.critical_above }}" required />
+    </label>
+    <label>
+      High above
+      <input type="number" name="high_above" step="0.01" value="{{ costs.high_above }}" required />
+    </label>
+    <label>
+      Monitor above
+      <input type="number" name="monitor_above" step="0.01" value="{{ costs.monitor_above }}" required />
+      <span class="caption">The bands must descend: critical &gt; high &gt; monitor.</span>
+    </label>
+
+    <div class="actions">
+      <button class="primary" type="submit">Save</button>
+      <span class="caption">
+        Predictions already stored keep the costs they were made under.
+      </span>
+    </div>
+  </form>
+{% endblock %}

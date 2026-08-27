@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Orders — ChainSight{% endblock %}
+
+{% block content %}
+  <h1>Your orders</h1>
+  <p class="lede">
+    Ranked by net benefit — what acting is worth — rather than by probability. An order at
+    85% risk carrying real margin is a bigger problem than one at 90% carrying twenty.
+  </p>
+
+  {% if not rows %}
+    <div class="card">
+      <p>No orders yet. <a href="/orders/new">Enter one</a> and it will be scored immediately.</p>
+    </div>
+  {% else %}
+    <div class="card scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Order</th>
+            <th>Shipping mode</th>
+            <th>Destination</th>
+            <th class="number">Total</th>
+            <th class="number">Risk</th>
+            <th class="number">Net benefit</th>
+            <th>Priority</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for order, prediction in rows %}
+            <tr>
+              <td><a href="/orders/{{ order.id }}">#{{ order.id }}</a><br />
+                <span class="caption">{{ order.product_name }}</span></td>
+              <td>{{ order.shipping_mode }}</td>
+              <td>{{ order.order_country }}</td>
+              <td class="number">{{ "%.2f"|format(order.order_total) }}</td>
+              <td class="number">
+                {% if prediction %}{{ "%.1f%%"|format(prediction.probability * 100) }}{% else %}—{% endif %}
+              </td>
+              <td class="number">
+                {% if prediction %}{{ "%.2f"|format(prediction.net_benefit) }}{% else %}—{% endif %}
+              </td>
+              <td>
+                {% if prediction %}
+                  <span class="priority priority-{{ prediction.priority }}">{{ prediction.priority }}</span>
+                {% else %}—{% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+{% endblock %}

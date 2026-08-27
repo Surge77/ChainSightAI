@@ -108,7 +108,7 @@ ignore = ["N803", "N806"]
 exclude = ["src/chainsight/columns.py"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["chainsight", "chainsight_web"]
+known-first-party = ["chainsight", "chainsight_web", "conftest"]
 
 [tool.ruff.lint.per-file-ignores]
 "*.ipynb" = ["E402", "F401"]
