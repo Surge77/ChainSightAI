@@ -8,11 +8,13 @@ Things known to be missing, so a cold start does not rediscover them. Closed ite
 ## Where the project is
 
 Fifteen phases merged to `main`, every one behind a green CI run on Python 3.11 and 3.12.
-**438 tests, `src/` at 100% line and branch coverage.** Tags: `v0.1.0` through `v0.6.0`.
+**438 tests, `src/` at 100% line and branch coverage.** Tags: `v0.1.0` through `v1.0.0`.
 
 The ML core is finished, its findings are written down, a trained model can be saved,
-registered, promoted and served, and the application around it runs. What is left is the
-documentation that says what the model may and may not be used for.
+registered, promoted and served, the application around it runs, and the model card, data
+card, architecture, glossary and nine ADRs say what all of it may and may not be used for.
+
+`v1.0.0` is tagged. Everything below is optional.
 
 ### To pick it up again
 
@@ -62,10 +64,20 @@ in this repository turned out to be wrong and was corrected next to the original
 
 ## Next, in dependency order
 
-- [ ] **Phase 10, deferred — counterfactual explanations.** Re-predict with one controllable
-      field changed and report the delta. Deliberately below the web app; the most droppable
-      piece in the plan.
-- [ ] **Phase 15 — model card, data card, glossary, architecture, ADRs, `v1.0.0`.**
+Nothing is required for `v1.0.0`. What follows is the work that would make it better.
+
+- [ ] **Counterfactual explanations.** Re-predict with one controllable field changed and
+      report the delta — "switch to First Class: +31pp" is a more useful sentence for an
+      operator than a feature-importance bar. Deferred from phase 10 and still the most
+      droppable piece in the plan; the README's comparison table promises it, so either build
+      it or amend that row.
+- [ ] **A retraining monitor.** `CategoryCodes.unseen_rate` already measures catalogue
+      turnover and the model card records that it reaches 40% six months past the training
+      window. Nothing watches it. A model with a shelf life of months and no alarm on it is
+      the most likely way this application becomes quietly wrong.
+- [ ] **Recalibration.** The serving model's worst reliability gap is 0.122, which is a model
+      saying 0.85 about orders that are late 98% of the time. Ranking survives it; the value
+      figures the UI shows are weaker than they look because of it.
 
 ## Questions raised and not settled
 
@@ -77,15 +89,17 @@ in this repository turned out to be wrong and was corrected next to the original
       `Product Name` is unseen on 19.56% of rows and `Category Name` on 17.38%. A feature
       absent for a fifth of the future is a liability; measure whether keeping it beats
       dropping it.
-- [ ] First Class with any payment type other than TRANSFER is late on **all 19,997 rows**.
-      That is a fingerprint of synthetic generation and should cap what the model card claims
-      about what the model learned.
+- [x] ~~First Class with any payment type other than TRANSFER is late on **all 19,997 rows**.~~
+      Measured again for the model card: it is **20,001 rows**, at a rate of exactly 1.0000
+      across CASH, DEBIT and PAYMENT. The original count is left here rather than quietly
+      edited. `docs/model_card.md` and `docs/data_card.md` both now carry it as the single
+      strongest reason not to deploy this artefact against live orders.
 - [ ] The depth-5 tree in the leakage demo scores 0.6956, matching the shipping-mode rule to
       four decimals; the *tuned* tree scores 0.5972. Read both fitted trees and confirm the
       first is the rule and the second is overfitting.
-- [ ] The model card has to explain that the production model is chosen on **ranking** rather
-      than accuracy, and that on accuracy alone the shipping-mode rule is within a point of
-      everything in the table.
+- [x] ~~The model card has to explain that the production model is chosen on ranking.~~ Done:
+      `docs/model_card.md` says it under "What it is measured against", including that on
+      accuracy the serving model beats the rule baseline by half a point.
 - [ ] `Order Country` has 164 levels. One-hot with `min_frequency=50` handles it now, but
       what integer codes cost the linear models was never separately measured.
 - [ ] The 500-row committed sample's late rate is 0.5800 against the population's 0.5483,

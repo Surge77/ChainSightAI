@@ -255,7 +255,7 @@ Expected profit stays in the application, because the operator needs it, but it 
 rather than predicted:
 
 ```
-expected profit  =  mean training margin (0.1206)  x  Order Item Total
+expected profit  =  mean training margin (0.1196)  x  Order Item Total
 ```
 
 `Order Item Total` is known exactly at order time. So the value at risk on an order is

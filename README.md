@@ -51,7 +51,7 @@ The consequences are real and are documented rather than hidden:
 | `roc_auc_score` (later declared, with a measurement) | Started with precision / recall / F1 at a stated threshold and a decile reliability table. Those turned out to hide the models' real advantage, so ranking metrics were declared and added — see [`docs/results.md`](docs/results.md) |
 | `OneHotEncoder` (later declared, with a measurement) | Started with `LabelEncoder` integer codes. They inverted the probability ordering between 0.6 and 0.9, so one-hot was declared and added; the worst calibration gap fell from 0.334 to 0.122 |
 | tree and ensemble regressors | The margin model is `LinearRegression` / `Ridge` / `Lasso` / `PolynomialFeatures`+linear only |
-| SHAP | Global importances, plus **local counterfactual deltas** — re-predict with one field changed and report the difference. "Switch to First Class: −31pp" is a more useful sentence for an operator than a SHAP bar |
+| SHAP | Nothing, yet — and this row is the one place the README described code that does not exist. Local counterfactual deltas (re-predict with one field changed, report the difference) are designed and unbuilt; they are in [`TODO.md`](TODO.md), not in `src/` |
 | XGBoost, LightGBM | Not used, and the reason is measured rather than asserted: `HistGradientBoostingClassifier`, the strongest learner tried, ranks *below* a one-hot random forest |
 | Optuna | `GridSearchCV` over time-ordered folds |
 | MLflow | A JSON model registry and a `model_versions` table |
@@ -93,8 +93,8 @@ carries 0.9. A single `if` on shipping mode scores 0.6953 accuracy, so that, and
 
 ## Status
 
-Early. This README describes the destination; the table below is where the code actually
-is. Every phase is a branch, a pull request and a tag.
+**`v1.0.0`.** Every phase below is a branch and a tag, and every one landed behind a green CI
+run on Python 3.11 and 3.12. 438 tests; `src/` at 100% line and branch coverage.
 
 | Phase | State |
 |---|---|
@@ -111,7 +111,7 @@ is. Every phase is a branch, a pull request and a tag.
 | 10 — decision engine | done (`v0.4.0`) |
 | 11 — persistence, registry and CLI | done (`v0.5.0`) |
 | 12–14 — FastAPI service, operator pages, control tower | done (`v0.6.0`) |
-| 15 — model card, ADRs, release | next |
+| 15 — model card, data card, ADRs, release | done (`v1.0.0`) |
 
 ## Getting started
 
@@ -220,14 +220,16 @@ exist.
 | [`docs/leakage.md`](docs/leakage.md) | The two leaks, and what removing them costs | **done** |
 | [`docs/results.md`](docs/results.md) | Baselines first, then every model against them | **done** |
 | [`docs/decision_engine.md`](docs/decision_engine.md) | The cost model, and every assumption in it | **done** |
-| `docs/model_card.md` | Intended use, known weaknesses, what this must not be used for | phase 15 |
-| `docs/architecture.md` | How the pieces fit | phase 15 |
-| `docs/adr/` | Why the load-bearing decisions were made | phase 15 |
+| [`docs/model_card.md`](docs/model_card.md) | Intended use, known weaknesses, what this must not be used for | **done** |
+| [`docs/data_card.md`](docs/data_card.md) | Provenance, licence, personal data, and four properties to know first | **done** |
+| [`docs/architecture.md`](docs/architecture.md) | How the pieces fit, and the four boundaries that are load-bearing | **done** |
+| [`docs/glossary.md`](docs/glossary.md) | Every term this project uses in a specific way | **done** |
+| [`docs/adr/`](docs/adr/) | Why the load-bearing decisions were made, one file each | **done** |
 
 Already written: [SECURITY.md](SECURITY.md), [CONTRIBUTING.md](CONTRIBUTING.md),
 [CHANGELOG.md](CHANGELOG.md), [TODO.md](TODO.md).
 
 ## Licence
 
-MIT — see [LICENSE](LICENSE). The dataset is not redistributed here and keeps its own
-terms; the data card lands with phase 15.
+MIT — see [LICENSE](LICENSE). The dataset is not redistributed here and keeps its own terms
+(CC0-1.0); its provenance is in [`docs/data_card.md`](docs/data_card.md).
