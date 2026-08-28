@@ -93,8 +93,8 @@ carries 0.9. A single `if` on shipping mode scores 0.6953 accuracy, so that, and
 
 ## Status
 
-**`v1.0.0`.** Every phase below is a branch and a tag, and every one landed behind a green CI
-run on Python 3.11 and 3.12. 438 tests; `src/` at 100% line and branch coverage.
+**`v1.1.0`.** Every phase below is a branch and a tag, and every one landed behind a green CI
+run on Python 3.11 and 3.12. 516 tests; `src/` at 100% line and branch coverage.
 
 | Phase | State |
 |---|---|
@@ -112,6 +112,7 @@ run on Python 3.11 and 3.12. 438 tests; `src/` at 100% line and branch coverage.
 | 11 — persistence, registry and CLI | done (`v0.5.0`) |
 | 12–14 — FastAPI service, operator pages, control tower | done (`v0.6.0`) |
 | 15 — model card, data card, ADRs, release | done (`v1.0.0`) |
+| after the release — CSRF, administrator surface, `init` fix | done (`v1.1.0`) |
 
 ## Getting started
 
