@@ -6,6 +6,14 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-08-28
+
+Everything the application grew after the first release: the CSRF gap `SECURITY.md` had
+listed as open since phase 0, an administrator surface that can grant a role without a
+shell, and a `init` that no longer discards a password it asked for.
+
+**516 tests. `src/` at 100% line and branch coverage**, on Python 3.11 and 3.12.
+
 ### Added
 - **CSRF tokens on every state-changing request**, closing the first of the four gaps
   `SECURITY.md` has listed as deliberately absent since phase 0. The check is a dependency
@@ -45,6 +53,15 @@ All notable changes to this project are recorded here. The format follows
   left edges. All four now read from `--measure` and `--gutter`.
 - The sign-in, registration and administrator pages get their own narrow centred column. A
   login form stranded at the left of a 62rem measure looks lost on a wide screen.
+
+### Fixed
+- `python -m chainsight_web init` read the password before it looked the account up, so on
+  an email that already existed it set `is_admin`, committed, printed a success line — and
+  dropped the password the caller had just typed. Somebody locked out could run it, type a
+  new password, read `is_admin is now True`, and reasonably believe the password worked. It
+  did not. The lookup happens first now, an existing account is never asked for a password
+  it cannot use, and the message says outright that the password is unchanged;
+  `--reset-password` remains the way to actually replace one.
 
 ## [1.0.0] - 2026-08-27
 

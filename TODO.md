@@ -8,13 +8,14 @@ Things known to be missing, so a cold start does not rediscover them. Closed ite
 ## Where the project is
 
 Fifteen phases merged to `main`, every one behind a green CI run on Python 3.11 and 3.12.
-**438 tests, `src/` at 100% line and branch coverage.** Tags: `v0.1.0` through `v1.0.0`.
+**516 tests, `src/` at 100% line and branch coverage.** Tags: `v0.1.0` through `v1.1.0`.
 
 The ML core is finished, its findings are written down, a trained model can be saved,
 registered, promoted and served, the application around it runs, and the model card, data
-card, architecture, glossary and nine ADRs say what all of it may and may not be used for.
+card, architecture, glossary and ten ADRs say what all of it may and may not be used for.
 
-`v1.0.0` is tagged. Everything below is optional.
+`v1.1.0` is tagged — the release plus the CSRF check, the administrator surface and the
+`init` fix that followed it. Everything below is optional.
 
 ### To pick it up again
 
