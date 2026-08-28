@@ -90,6 +90,64 @@ class TestInit:
         assert web_cli.main(["init", "--email", "a@b.co"]) == 0
         assert len(accounts(environment)) == 1
 
+    def test_a_rerun_leaves_the_password_alone_and_says_so(
+        self, environment: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """The bug this replaced: the second password was hashed into nothing and never said so."""
+        web_cli.main(["init", "--email", "a@b.co", "--password", "the original password"])
+        before = accounts(environment)[0].password_hash
+
+        code = web_cli.main(["init", "--email", "a@b.co", "--password", "a different password"])
+
+        assert code == 0
+        assert accounts(environment)[0].password_hash == before
+        assert "password is unchanged" in capsys.readouterr().out
+
+    def test_a_rerun_does_not_even_ask_for_a_password(
+        self, environment: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Looking the account up first is what stops a prompt whose answer is discarded."""
+        web_cli.main(["init", "--email", "a@b.co", "--password", "a long enough password"])
+
+        def refuse(_: str = "") -> str:
+            raise AssertionError("an existing account must not be prompted for a password")
+
+        monkeypatch.setattr(web_cli.getpass, "getpass", refuse)
+
+        assert web_cli.main(["init", "--email", "a@b.co"]) == 0
+
+    def test_reset_password_is_how_a_locked_out_account_gets_a_new_one(
+        self, environment: Path
+    ) -> None:
+        web_cli.main(["init", "--email", "a@b.co", "--password", "the forgotten password"])
+        before = accounts(environment)[0].password_hash
+
+        code = web_cli.main(
+            [
+                "init",
+                "--email",
+                "a@b.co",
+                "--password",
+                "the replacement password",
+                "--reset-password",
+            ]
+        )
+
+        assert code == 0
+        assert accounts(environment)[0].password_hash != before
+        assert len(accounts(environment)) == 1
+
+    def test_a_reset_still_refuses_a_weak_password(self, environment: Path) -> None:
+        web_cli.main(["init", "--email", "a@b.co", "--password", "the original password"])
+        before = accounts(environment)[0].password_hash
+
+        code = web_cli.main(
+            ["init", "--email", "a@b.co", "--password", "short", "--reset-password"]
+        )
+
+        assert code == 1
+        assert accounts(environment)[0].password_hash == before
+
     def test_the_stored_password_is_a_hash_and_not_the_password(self, environment: Path) -> None:
         web_cli.main(["init", "--email", "a@b.co", "--password", "a long enough password"])
 
