@@ -8,12 +8,17 @@
     <title>{% block title %}ChainSight{% endblock %}</title>
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', path='/favicon.svg') }}" />
     <link rel="stylesheet" href="{{ url_for('static', path='/chainsight.css') }}" />
+    {# In <head> and not deferred, because it writes the attribute the palette reads. Moved
+       to the end of <body> it would paint the system theme first and the chosen one second,
+       and a chosen light theme would open with a flash of dark on every page load. #}
+    <script src="{{ url_for('static', path='/theme.js') }}"></script>
   </head>
   <body>
-    {# The bars run the full width of the window; their *contents* sit in the same measure
-       as `main` and the footer. Without the inner wrapper the masthead starts at the window
-       edge while the page starts wherever centring puts it, which is three different left
-       edges on one screen. #}
+    {# Both bands run the full width of the window; their *contents* sit in `--frame`, the
+       same edge the footer takes. Those three say the same thing on every page, so they are
+       the application's furniture and belong at its corners; `main` alone keeps the narrower
+       reading measure. Two left edges on purpose -- the frame and the page -- rather than
+       three by accident, which is what the inner wrapper is for. #}
     <header class="masthead">
       <div class="bar">
         {# The same mark as the tab icon, inlined rather than linked so that it can be drawn
@@ -47,6 +52,38 @@
             <a href="/login">Sign in</a>
             <a href="/register">Register</a>
           {% endif %}
+          {# Outside the branch above: the sign-in page is dark for the same visitor the
+             orders page is, so the control that fixes it cannot be one you have to sign in
+             to reach. Hidden until theme.js reveals it -- see the note there.
+
+             All three marks ship in the markup and theme.js shows one, rather than the
+             script drawing an SVG: the shapes then live beside the rest of the page's
+             shapes, and a mark that renders wrong is a mark you can find in a template.
+             Drawn in `currentColor` for the same reason the wordmark is -- an icon with its
+             own colours is the one thing on the page a theme switch cannot theme. The word
+             stays next to the mark, because a lone crescent does not say whether it is
+             reporting the theme or offering it. #}
+          <button type="button" id="theme-toggle" class="link theme-toggle" hidden>
+            <svg class="theme-icon" data-mode="system" viewBox="0 0 16 16" width="16"
+                 height="16" aria-hidden="true" focusable="false">
+              <circle cx="8" cy="8" r="5.6" fill="none" stroke="currentColor" stroke-width="1.5" />
+              <path d="M8 2.4a5.6 5.6 0 0 1 0 11.2Z" fill="currentColor" />
+            </svg>
+            <svg class="theme-icon" data-mode="light" viewBox="0 0 16 16" width="16"
+                 height="16" aria-hidden="true" focusable="false" hidden>
+              <g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                <circle cx="8" cy="8" r="3.1" />
+                <path d="M8 1.1v1.5M8 13.4v1.5M1.1 8h1.5M13.4 8h1.5M3.2 3.2l1.1 1.1
+                         M11.7 11.7l1.1 1.1M12.8 3.2l-1.1 1.1M4.3 11.7l-1.1 1.1" />
+              </g>
+            </svg>
+            <svg class="theme-icon" data-mode="dark" viewBox="0 0 16 16" width="16"
+                 height="16" aria-hidden="true" focusable="false" hidden>
+              <path d="M12.9 10.3A5.6 5.6 0 0 1 5.7 3.1 5.6 5.6 0 1 0 12.9 10.3Z"
+                    fill="currentColor" />
+            </svg>
+            <span class="theme-label">System</span>
+          </button>
         </nav>
       </div>
     </header>

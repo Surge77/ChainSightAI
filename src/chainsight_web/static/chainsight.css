@@ -5,40 +5,50 @@
    carry colour here is priority -- which is the one signal the page exists to convey. */
 
 :root {
-  --ink: #16191d;
-  --paper: #f7f7f5;
-  --card: #ffffff;
-  --rule: #dcdcd6;
-  --muted: #63676d;
-  --accent: #1f4e79;
+  /* `light dark` is what lets `light-dark()` below resolve, and it is also what tells the
+     browser to draw its own furniture in the page's scheme -- selects, scrollbars, the
+     caret. Without it a dark page keeps a white dropdown and a white scrollbar, which is
+     the tell that a theme was painted on rather than declared. */
+  color-scheme: light dark;
 
-  --critical: #9b2226;
-  --high: #bb6b00;
-  --monitor: #40618a;
-  --low: #5c6670;
+  --ink: light-dark(#16191d, #e7e7e3);
+  --paper: light-dark(#f7f7f5, #16181b);
+  --card: light-dark(#ffffff, #1e2126);
+  --rule: light-dark(#dcdcd6, #33383f);
+  --muted: light-dark(#63676d, #9aa0a8);
+  --accent: light-dark(#1f4e79, #7fb0e0);
 
-  /* One measure and one gutter for the whole page. The masthead, the disclaimer, the
-     content and the footer all read from these, so there is exactly one left edge on
-     screen rather than one per band. */
+  /* The dark half of each priority colour is lighter and less saturated rather than the
+     light half inverted. Priority is the only signal this page carries in colour, and
+     #9b2226 on #16181b does not have the contrast left to carry it. */
+  --critical: light-dark(#9b2226, #f07a7e);
+  --high: light-dark(#bb6b00, #e0a044);
+  --monitor: light-dark(#40618a, #8fb4e0);
+  --low: light-dark(#5c6670, #9aa0a8);
+
+  /* One reading measure and one gutter. `main` and the footer read from these, so the page
+     itself has exactly one left edge rather than one per block. 62rem is a column, not a
+     window: prose and a form are read, and a line that runs the width of a monitor is not. */
   --measure: 62rem;
-  --gutter: 1.25rem;
+  --gutter: clamp(1.25rem, 2.5vw, 2rem);
+
+  /* The two bands that carry their own background -- masthead and disclaimer -- run to this
+     instead. They are the application's frame rather than its page: a wordmark parked a few
+     hundred pixels inside the window reads as a heading that has drifted, because nothing to
+     its left explains the gap, whereas a band with its own background and rule is visibly a
+     different layer and is allowed its own edge. Wide enough that every ordinary screen puts
+     the wordmark a gutter from the corner where a wordmark belongs, and capped anyway so that
+     on a 4K monitor it and the navigation are not a foot apart. */
+  --frame: 108rem;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --ink: #e7e7e3;
-    --paper: #16181b;
-    --card: #1e2126;
-    --rule: #33383f;
-    --muted: #9aa0a8;
-    --accent: #7fb0e0;
-
-    --critical: #f07a7e;
-    --high: #e0a044;
-    --monitor: #8fb4e0;
-    --low: #9aa0a8;
-  }
-}
+/* What the masthead toggle writes onto <html>. With neither attribute the `light dark`
+   above leaves the choice to the operating system, which stays the default: a page that
+   pins itself to light on first visit has overruled a preference the visitor already
+   expressed everywhere else. One property switches every token at once, so the two halves
+   of the palette cannot drift apart the way two duplicated blocks would. */
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
 
 * { box-sizing: border-box; }
 
@@ -49,8 +59,19 @@ body {
   font: 16px/1.55 "Charter", "Iowan Old Style", Georgia, serif;
 }
 
-/* The shared column. `.bar` puts a full-width band's contents on the same edge. */
+/* The shared column. `.bar` centres a full-width band's contents in a measure.
+
+   Rebinding `--measure` rather than setting `max-width` twice is what keeps `.bar` a single
+   rule: the bands inherit the token, so the frame's width is stated once, beside the reading
+   measure it is deliberately wider than. */
 .bar { max-width: var(--measure); margin: 0 auto; padding-inline: var(--gutter); }
+
+/* The furniture takes the frame: the masthead, the banner under it and the footer say the
+   same thing on every page, so they belong to the application and line up with each other
+   at the window's edge. `main` keeps the reading measure, because it is the only thing on
+   screen that changes from page to page and the only thing long enough to need a column.
+   Two left edges in total, and which one a block gets is decided by that one question. */
+.masthead .bar, .disclaimer .bar { --measure: var(--frame); }
 
 main {
   max-width: var(--measure);
@@ -91,6 +112,26 @@ nav a:hover, .link:hover { text-decoration: underline; }
 .inline { display: inline; }
 button.link { background: none; border: 0; padding: 0; font: inherit; cursor: pointer; }
 
+/* Muted, because a theme switch is furniture and the navigation is the page. The width is
+   fixed to the longest of the three labels: without it the button resizes under the
+   pointer as it is clicked, and the next click lands somewhere else. */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--muted);
+  min-width: 5.6em;
+  white-space: nowrap;
+}
+/* Sized in `em` so the mark tracks the navigation's type, the way `.mark` tracks the
+   wordmark's. `flex: none` keeps it a circle when the label beside it is the long one. */
+.theme-icon { width: 1.05em; height: 1.05em; flex: none; }
+/* The browser's own `[hidden] { display: none }` is HTML-namespaced and does not reach an
+   <svg>, so without this line the marks for the two modes you are not in stay on screen. */
+.theme-icon[hidden] { display: none; }
+.theme-toggle:hover { color: var(--ink); text-decoration: none; }
+.theme-toggle:hover .theme-label { text-decoration: underline; }
+
 .disclaimer {
   border-bottom: 1px solid var(--rule);
 }
@@ -102,6 +143,10 @@ button.link { background: none; border: 0; padding: 0; font: inherit; cursor: po
   padding-block: 0.5rem;
   color: var(--muted);
   font-size: 0.85rem;
+  /* Centred, like the footer. Neither band is the start of a column -- they are captions on
+     the whole window, and a single grey sentence pinned to a left edge under a masthead that
+     runs corner to corner reads as text that failed to find its column. */
+  text-align: center;
 }
 
 h1, h2, h3 { line-height: 1.2; letter-spacing: -0.01em; }
@@ -231,20 +276,27 @@ button.secondary { font: inherit; padding: 0.4rem 0.9rem; border: 1px solid var(
 .caption { color: var(--muted); font-size: 0.85rem; margin-top: 0.5rem; }
 
 footer {
-  max-width: var(--measure);
-  margin: 0 auto;
-  padding: 1.25rem var(--gutter);
+  /* Two things were wrong here at once. The rule overhung its own text, because a border
+     draws on the padding box while the words sit a gutter inside it -- so the element is
+     sized to the *content* column now and the padding is vertical only. And it was measured
+     against `--measure`, which put a caption that is identical on every page into the
+     column of the page it is not about; on the frame it bookends the masthead instead, and
+     the wordmark, the banner and this line all start at one x.
+
+     The `min()` is what stops a phone running the text into the window edge, which is the
+     case a plain `max-width` here would get wrong. */
+  width: min(100% - 2 * var(--gutter), var(--frame) - 2 * var(--gutter));
+  margin-inline: auto;
+  padding-block: 1.25rem;
   border-top: 1px solid var(--rule);
   color: var(--muted);
   font-size: 0.82rem;
   display: grid;
   gap: 0.2rem;
-}
-
-/* The auth pages are a 25rem column with everything in it centred; a left-aligned footer
-   under that reads as a second, unrelated page. Keyed off `.auth` rather than a body class
-   so the four doors — sign in, register, change password, control tower — stay in one rule
-   and a fifth one cannot forget to opt in. */
-body:has(.auth) footer {
+  /* Centred on every page, not only the four doors. This used to be a `body:has(.auth)`
+     exception, on the reasoning that a left-aligned footer under a centred sign-in column
+     read as a second unrelated page -- which was true, and just as true under every other
+     page: two grey sentences that describe the whole application are a caption on the
+     window, and a caption centres. One rule now, and no page can be the one that forgot. */
   text-align: center;
 }
