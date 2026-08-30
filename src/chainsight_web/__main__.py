@@ -38,6 +38,12 @@ def init(args: argparse.Namespace) -> int:
     """Create an account, promote an existing one, or reset the password on one."""
     app = create_app(Settings.from_env())
     email = args.email.strip().lower()
+    # `--operator` is the only role flag, so args.admin is False when it was passed and None
+    # when it was not. Creating and promoting read None as "administrator" — that is what this
+    # command exists for. A reset reads it as "leave the role alone", because a role change
+    # nobody typed is a role change nothing audits: `/admin/users/role` writes a `role_changes`
+    # row on every web-initiated one, and a password command has no business skipping that.
+    admin = True if args.admin is None else args.admin
 
     with app.state.sessions() as session:
         existing = session.scalars(select(User).where(User.email == email)).first()
@@ -47,7 +53,7 @@ def init(args: argparse.Namespace) -> int:
         # then dropped on the floor, under a message that read like success — so somebody
         # locked out of an account ran this, typed a new password, and believed it worked.
         if existing is not None and not args.reset_password:
-            existing.is_admin = args.admin
+            existing.is_admin = admin
             session.commit()
             print(
                 f"{email} already existed; is_admin is now {existing.is_admin}. "
@@ -61,15 +67,24 @@ def init(args: argparse.Namespace) -> int:
 
         if existing is not None:
             existing.password_hash = hash_password(password)
-            existing.is_admin = args.admin
+            if args.admin is not None:
+                existing.is_admin = args.admin
+            # A password written here is one an administrator with a shell chose, and therefore
+            # one they know. Holding the account at /password until the owner replaces it is
+            # what keeps a reset from leaving behind a shared secret — the same hold
+            # `/admin/users` puts on every password it issues, for the same reason.
+            existing.must_change_password = True
             session.commit()
-            print(f"{email} already existed; password reset, is_admin is now {existing.is_admin}")
+            print(
+                f"{email} already existed; password reset and must be replaced at the next "
+                f"sign-in. is_admin is {existing.is_admin}."
+            )
             return 0
 
-        session.add(User(email=email, password_hash=hash_password(password), is_admin=args.admin))
+        session.add(User(email=email, password_hash=hash_password(password), is_admin=admin))
         session.commit()
 
-    print(f"created {email}{' as an administrator' if args.admin else ''}")
+    print(f"created {email}{' as an administrator' if admin else ''}")
     return 0
 
 
@@ -97,15 +112,20 @@ def build_parser() -> argparse.ArgumentParser:
     created.add_argument(
         "--reset-password",
         action="store_true",
-        help="replace the password on an account that already exists",
+        help="replace the password on an account that already exists; leaves its role alone",
     )
+    # Defaulting to None rather than True is what lets `init` tell "no role was asked for" apart
+    # from "administrator was asked for". Both create and promote treat the first as the second;
+    # only a reset needs the difference, and it is the one place where getting it wrong grants a
+    # role silently.
     created.add_argument(
         "--operator",
         dest="admin",
         action="store_false",
+        default=None,
         help="create an ordinary operator instead of an administrator",
     )
-    created.set_defaults(run=init, admin=True)
+    created.set_defaults(run=init)
 
     served = subcommands.add_parser("serve", help="run the application")
     served.add_argument("--host", default="")

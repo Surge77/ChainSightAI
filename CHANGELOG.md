@@ -6,6 +6,21 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+- `init --reset-password` no longer moves the account's role. `--operator` defaulted to
+  "administrator" when it was absent, so the natural way to help a locked-out operator —
+  `init --email them --reset-password` — silently promoted them, and the same flag on an
+  admin silently demoted them. Both bypassed the `role_changes` row that `/admin/users/role`
+  writes on every web-initiated role change, so the promotion left no trail to find. The
+  role now moves only when a role flag is actually typed.
+- `init --reset-password` marks the account `must_change_password`. A password typed at a
+  shell is one the administrator knows, and without the hold it kept working for the life of
+  the account — the deniability `/admin/users` has always closed by issuing passwords it
+  never lets the administrator choose. A reset now opens exactly one door, the same as
+  every other administrator-set password.
+- The `[1.1.0]` heading is a link again, and `[Unreleased]` compares from v1.1.0 rather than
+  showing the release that just shipped.
+
 ## [1.1.0] - 2026-08-28
 
 Everything the application grew after the first release: the CSRF gap `SECURITY.md` had
@@ -271,6 +286,7 @@ The scaffold, and the rule the rest of the project has to live inside.
   request templates, and a README stating up front that this is a production-shaped
   application over a historical dataset, not a live system.
 
-[Unreleased]: https://github.com/Surge77/ChainSightAI/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/Surge77/ChainSightAI/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/Surge77/ChainSightAI/releases/tag/v1.1.0
 [1.0.0]: https://github.com/Surge77/ChainSightAI/releases/tag/v1.0.0
 [0.1.0]: https://github.com/Surge77/ChainSightAI/releases/tag/v0.1.0
