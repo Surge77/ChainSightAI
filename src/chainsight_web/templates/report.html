@@ -5,61 +5,77 @@
   <h1>Order #{{ order.id }}</h1>
 
   {% if not prediction %}
-    <div class="card"><p class="error">This order has no prediction yet.</p></div>
+    <div class="card"><p class="error">This order has not been scored yet.</p></div>
   {% else %}
     <div class="card">
       <p class="priority priority-{{ prediction.priority }}">{{ prediction.priority }}</p>
       <p style="font-size:1.15rem;margin:0.2rem 0 0">{{ prediction.recommendation }}</p>
       <p class="figure-note">
-        Scored by {{ prediction.model_name }}, registry version {{ prediction.model_version }},
-        on {{ prediction.created_at.strftime("%Y-%m-%d %H:%M") }} UTC. The numbers below are the
-        ones recorded at that moment; editing the cost model does not rewrite them.
+        Scored on {{ prediction.created_at.strftime("%Y-%m-%d %H:%M") }} UTC by
+        {{ prediction.model_name }} (version {{ prediction.model_version }}). These figures
+        are frozen at that moment — if an administrator changes the cost settings afterwards,
+        this report does not change with them.
       </p>
     </div>
 
+    {# Four money figures in a row, each of which used to be labelled with a term of art and
+       explained in a sentence that assumed you knew the term already. The label now says
+       what the number is; the note says where it comes from. #}
     <div class="grid">
       <div class="card">
-        <p class="figure-label">Late-delivery risk</p>
+        <p class="figure-label">Chance of being late</p>
         <p class="figure">{{ "%.1f%%"|format(prediction.probability * 100) }}</p>
         <p class="figure-note">
-          Flagged above {{ "%.4f"|format(prediction.threshold) }}, which is derived from the cost
-          of intervening rather than set at a half.
+          We flag anything above {{ "%.1f%%"|format(prediction.threshold * 100) }} — a
+          catalogue-wide risk label, taken from what the two mistakes cost rather than
+          rounded at half. Stepping in on an order this size only pays above
+          {{ "%.1f%%"|format(prediction.break_even * 100) }}, and that is the number the
+          priority above was decided on.
         </p>
       </div>
       <div class="card">
         <p class="figure-label">Expected profit</p>
         <p class="figure">{{ "%.2f"|format(prediction.expected_profit) }}</p>
         <p class="figure-note">
-          The measured mean margin times a known order total — an estimate with a stated
-          basis, not a model output. Nothing here can predict the margin ratio itself.
+          What this order should earn if all goes well: the average margin we measured,
+          applied to this order's total. An estimate, not a prediction.
         </p>
       </div>
       <div class="card">
-        <p class="figure-label">Value at risk</p>
+        <p class="figure-label">Money at risk</p>
         <p class="figure">{{ "%.2f"|format(prediction.value_at_risk) }}</p>
-        <p class="figure-note">Probability times what a late delivery on this order costs.</p>
+        <p class="figure-note">
+          What arriving late is expected to cost you here — the cost of a late delivery on
+          this order, scaled by how likely it is.
+        </p>
       </div>
       <div class="card">
-        <p class="figure-label">Net benefit of acting</p>
+        <p class="figure-label">Net saving if we act</p>
         <p class="figure">{{ "%.2f"|format(prediction.net_benefit) }}</p>
-        <p class="figure-note">Value at risk, less what intervening costs. This is the ranking.</p>
+        <p class="figure-note">
+          What stepping in is expected to save here, after paying for it. Your orders are
+          ranked on this figure; below zero it means the intervention costs more than the
+          lateness is expected to.
+        </p>
       </div>
     </div>
 
-    <h2>Why this is not simply the riskiest order first</h2>
-    <div class="card">
+    <details class="why">
+      <summary>Why isn't the riskiest order simply the most urgent one?</summary>
       <p>
-        Ranking on probability alone treats a rupee of margin and sixty as the same problem.
-        Ranking on net benefit does not. On this dataset the effect is real but bounded: every
-        order falls between a few rupees and 499.95, so the fixed goodwill penalty is the
-        larger half of the exposure on a typical order and a typical order can never reach
-        <span class="priority priority-critical">critical</span> however risky it is. That is a
-        property of the data rather than a bug, and it is stated here rather than implied away.
+        Because ranking on risk alone treats one rupee of profit and sixty as the same
+        problem. Ranking on what is worth acting on does not. On this particular dataset the
+        effect is real but limited: every order is worth somewhere between a few rupees and
+        499.95, so the fixed goodwill cost of a late delivery is the larger half of the damage
+        on a typical order — which also means a typical order here can never reach
+        <span class="priority priority-critical">critical</span>, however risky it is. That is
+        a fact about the data rather than a bug, and it is said out loud here rather than
+        quietly designed around.
       </p>
-    </div>
+    </details>
   {% endif %}
 
-  <h2>The order as it was entered</h2>
+  <h2>What you entered</h2>
   <div class="card scroll">
     <table>
       <tbody>

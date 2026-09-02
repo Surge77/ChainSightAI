@@ -21,6 +21,7 @@ from chainsight_web.tables import DecisionConfig, ModelVersion, Prediction, Trai
 
 DEFAULT_COSTS = {
     "intervention": "15.0",
+    "intervention_effectiveness": "1.0",
     "margin_lost_when_late": "0.5",
     "fixed_penalty_when_late": "25.0",
     "mean_margin": "0.1196",
@@ -50,7 +51,7 @@ class TestDashboard:
     def test_it_names_the_model_that_is_serving(self, client: TestClient, admin: User) -> None:
         body = client.get("/admin").text
 
-        assert "Serving registry version 1" in body
+        assert "version 1" in body
         assert "one-hot random forest" in body
 
     def test_an_empty_installation_renders_without_dividing_by_zero(
@@ -108,7 +109,7 @@ class TestModelRegistryPage:
         body = client.get("/admin/models").text
 
         assert "one-hot random forest" in body
-        assert "serving" in body
+        assert "in use" in body
 
     def test_reading_the_page_refreshes_the_table_from_the_registry(
         self, client: TestClient, admin: User, artefacts: Path, sessions: sessionmaker[Session]
@@ -136,7 +137,7 @@ class TestPromotion:
         response = client.post("/admin/models/promote", data={"version": str(version)})
 
         assert response.status_code == 303
-        assert "is+now+serving" in response.headers["location"]
+        assert "now+scoring+your+orders" in response.headers["location"]
 
     def test_a_worse_model_is_refused_through_the_route_too(
         self, client: TestClient, admin: User, artefacts: Path
@@ -146,7 +147,7 @@ class TestPromotion:
 
         response = client.post("/admin/models/promote", data={"version": str(version)})
 
-        assert "Newer+is+not+better" in response.headers["location"]
+        assert "Being+newer+does+not+make+it+better" in response.headers["location"]
         live = registry.Registry(path=artefacts / registry.REGISTRY_NAME).current()
         assert live is not None and live.version == 1
 
@@ -247,7 +248,7 @@ class TestRetrain:
         with sessions() as session:
             run = session.scalars(select(TrainingRun)).one()
         assert run.promoted is False
-        assert "not promoted" in run.outcome
+        assert "not switched on" in run.outcome
 
     def test_a_retrain_that_wins_is_promoted_and_serves(
         self, client: TestClient, admin: User, artefacts: Path, sessions: sessionmaker[Session]
@@ -307,8 +308,8 @@ class TestCostModel:
     ) -> None:
         body = client.get("/admin/costs").text
 
-        assert "0.2966" in body
-        assert "Not 0.5" in body
+        assert "0.4216" in body
+        assert "Not 50%" in body
 
     def test_saving_a_cost_model_stores_it_with_its_author(
         self, client: TestClient, admin: User, sessions: sessionmaker[Session]

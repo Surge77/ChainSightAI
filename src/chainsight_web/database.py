@@ -15,8 +15,10 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 
-from sqlalchemy import Engine, create_engine
+from sqlalchemy import Engine, create_engine, inspect
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
+
+from chainsight_web.config import ConfigurationError
 
 
 class Base(DeclarativeBase):
@@ -47,6 +49,30 @@ def create_tables(engine: Engine) -> None:
     means a new database file, which is stated here rather than discovered.
     """
     Base.metadata.create_all(engine)
+
+
+def verify_schema(engine: Engine) -> None:
+    """Refuse to start against a database that predates a column, and say which one.
+
+    `create_all` adds missing tables and cannot add a missing column, so a database created
+    before a schema change keeps working until the first request that touches the new field
+    and then fails as a 500 somewhere inside a template. This is not a migration tool and
+    does not want to be one -- it turns that into a startup message naming the column and
+    both ways out, which is the same fail-closed reasoning that keeps `Settings.from_env`
+    from inventing a session secret.
+    """
+    tables = inspect(engine)
+    for name, table in Base.metadata.tables.items():
+        if not tables.has_table(name):
+            continue
+        present = {column["name"] for column in tables.get_columns(name)}
+        missing = sorted(column.name for column in table.columns if column.name not in present)
+        if missing:
+            raise ConfigurationError(
+                f"the {name} table in this database is missing {', '.join(missing)}. It was "
+                "created before that column existed. Delete the database file to start "
+                "again, or add the column with ALTER TABLE if the rows in it matter."
+            )
 
 
 def session_scope(sessions: sessionmaker[Session]) -> Iterator[Session]:

@@ -71,13 +71,19 @@ as the score, because a cap changes what the score means.
 cost. **Every field is an assumption with no empirical basis in this dataset**, which records
 no intervention, no penalty and no customer response.
 
-**Derived threshold** — `intervention / (intervention + late cost)`, which is **0.2966** here
-rather than 0.5. A threshold of 0.5 silently assumes the two mistakes cost the same.
+**Derived threshold** — `intervention / (effectiveness × late cost)`, which is **0.4216**
+here rather than 0.5. A threshold of 0.5 silently assumes the two mistakes cost the same.
+Calibrated on an order of typical value.
+
+**Break-even** — the same sum done with one order's own value, and the number its priority
+is actually decided on. It is above the threshold for a cheap order and below it for a dear
+one, which is why a flag is a risk label rather than an instruction.
 
 **Value at risk** — `probability × what a late delivery on this order costs`.
 
-**Net benefit** — value at risk, less the cost of intervening. **This is the ranking.** It is
-why a 499.95 order at 85% risk outranks a 20.00 order at 90%.
+**Net benefit** — the share of the value at risk that intervening is expected to recover,
+less the cost of intervening. **This is the ranking.** It is why a 499.95 order at 85% risk
+outranks a 20.00 order at 90%.
 
 **Priority** — `CRITICAL`, `HIGH`, `MONITOR`, `LOW`, banded on net benefit rather than on
 probability. Because every order here is under 500 and the fixed goodwill penalty does not

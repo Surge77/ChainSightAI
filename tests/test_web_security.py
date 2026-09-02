@@ -165,6 +165,7 @@ class TestValidation:
         with pytest.raises(ValueError, match="descend"):
             CostInput(
                 intervention=15.0,
+                intervention_effectiveness=1.0,
                 margin_lost_when_late=0.5,
                 fixed_penalty_when_late=25.0,
                 mean_margin=0.1196,
@@ -179,6 +180,7 @@ class TestValidation:
         with pytest.raises(ValueError, match="critical_above") as raised:
             CostInput(
                 intervention=15.0,
+                intervention_effectiveness=1.0,
                 margin_lost_when_late=0.5,
                 fixed_penalty_when_late=25.0,
                 mean_margin=0.1196,

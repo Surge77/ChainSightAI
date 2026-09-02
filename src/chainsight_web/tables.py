@@ -135,6 +135,11 @@ class Prediction(Base):
 
     probability: Mapped[float] = mapped_column(Float)
     threshold: Mapped[float] = mapped_column(Float)
+    #: The break-even probability for this order's own value. The threshold above is one
+    #: number for the whole catalogue and this one is not, so the two disagree on every
+    #: order that is not of typical value -- which is exactly the reconciliation an operator
+    #: was previously left to do in their head.
+    break_even: Mapped[float] = mapped_column(Float)
     expected_profit: Mapped[float] = mapped_column(Float)
     value_at_risk: Mapped[float] = mapped_column(Float)
     net_benefit: Mapped[float] = mapped_column(Float)
@@ -203,6 +208,7 @@ class DecisionConfig(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     intervention: Mapped[float] = mapped_column(Float)
+    intervention_effectiveness: Mapped[float] = mapped_column(Float)
     margin_lost_when_late: Mapped[float] = mapped_column(Float)
     fixed_penalty_when_late: Mapped[float] = mapped_column(Float)
     mean_margin: Mapped[float] = mapped_column(Float)

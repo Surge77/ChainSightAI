@@ -91,7 +91,7 @@ class TestLive:
     def test_nothing_promoted_is_a_sentence_rather_than_an_exception_nobody_can_read(
         self, empty_artefacts: Path
     ) -> None:
-        with pytest.raises(ServiceError, match="no model has been promoted"):
+        with pytest.raises(ServiceError, match="No model is switched on yet"):
             ModelService(artefacts=empty_artefacts).live()
 
     def test_an_artefact_the_loader_refuses_carries_the_refusal_through(
@@ -210,6 +210,7 @@ class TestSyncVersions:
 def _config(*, intervention: float, updated_by: int) -> DecisionConfig:
     return DecisionConfig(
         intervention=intervention,
+        intervention_effectiveness=1.0,
         margin_lost_when_late=0.5,
         fixed_penalty_when_late=25.0,
         mean_margin=0.1196,

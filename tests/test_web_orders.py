@@ -98,8 +98,8 @@ class TestNewOrder:
         report = client.get(f"/orders/{order_id}")
 
         assert report.status_code == 200
-        assert "late-delivery risk" in report.text.lower()
-        assert "Net benefit of acting" in report.text
+        assert "chance of being late" in report.text.lower()
+        assert "Net saving if we act" in report.text
 
     def test_the_prediction_records_which_model_produced_it(
         self,
@@ -221,7 +221,7 @@ class TestWithoutAModel:
     ) -> None:
         client, _ = _client_without_a_model(tmp_path, empty_artefacts)
 
-        assert "no model has been promoted" in client.get("/orders/new").text
+        assert "No model is switched on yet" in client.get("/orders/new").text
 
     def test_an_order_posted_without_a_model_is_kept_rather_than_lost(
         self, tmp_path: Path, empty_artefacts: Path, an_order: dict[str, str]

@@ -33,7 +33,10 @@ from pathlib import Path
 from chainsight import compare, decision, ingest, leakage, models, persistence, registry, training
 from chainsight.features import ORDER_FIELDS, single_order
 
-_DESCRIPTION = "Pre-dispatch late-delivery risk, the leakage audit behind it, and one decision."
+_DESCRIPTION = (
+    "Work out how likely an order is to arrive late, before it ships, and whether it is "
+    "worth doing anything about."
+)
 
 #: The full table, if it has been fetched. `scripts/fetch_data.py` puts it here.
 FULL_DATA = Path("data") / "raw" / "DataCoSupplyChainDataset.csv"
@@ -46,8 +49,9 @@ def _source(args: argparse.Namespace) -> Path:
     path = SAMPLE_DATA if args.sample else Path(args.data)
     if not path.is_file():
         raise SystemExit(
-            f"{path} is absent. Run `python scripts/fetch_data.py`, or pass --sample to use "
-            "the committed 500-row slice."
+            f"There is no dataset at {path}. Either run `python scripts/fetch_data.py` to "
+            "download it, or pass --sample to use the small 500-order sample that ships "
+            "with this repository."
         )
     return path
 
@@ -104,15 +108,15 @@ def train(args: argparse.Namespace) -> int:
     path = persistence.save(run.artefact, name, directory=_artefacts(args))
     entry = _registry(args).register(run.manifest, name, note=args.note)
     print(f"\nsaved   {path}")
-    print(f"registered as version {entry.version}")
+    print(f"saved as version {entry.version}")
 
     if args.promote:
         try:
             _registry(args).promote(entry.version, force=args.force)
         except registry.RegistryError as refusal:
-            print(f"\nnot promoted: {refusal}", file=sys.stderr)
+            print(f"\nnot switched on: {refusal}", file=sys.stderr)
             return 1
-        print(f"promoted version {entry.version}; it is now serving")
+        print(f"version {entry.version} now scores orders")
     return 0
 
 
@@ -125,11 +129,12 @@ def show_registry(args: argparse.Namespace) -> int:
         except registry.RegistryError as refusal:
             print(refusal, file=sys.stderr)
             return 1
-        print(f"version {entry.version} ({entry.model_name}) is now serving\n")
+        print(f"version {entry.version} ({entry.model_name}) now scores orders\n")
 
     print(known.table())
     live = known.current()
-    print(f"\nserving: {'version ' + str(live.version) if live else 'nothing promoted yet'}")
+    in_use = f"version {live.version}" if live else "none yet"
+    print(f"\nscoring orders: {in_use}")
     return 0
 
 
@@ -146,12 +151,18 @@ def predict(args: argparse.Namespace) -> int:
         return 0
 
     if args.order is None:
-        raise SystemExit("give an order JSON file, or --template to print a blank one")
+        raise SystemExit(
+            "Give me a JSON file describing the order, or pass --template to print a "
+            "blank one you can fill in."
+        )
 
     known = _registry(args)
     live = known.current()
     if live is None:
-        raise SystemExit("nothing is promoted. Run `chainsight train --promote` first.")
+        raise SystemExit(
+            "No model is switched on, so there is nothing to score with. Run "
+            "`chainsight train --promote` first."
+        )
 
     try:
         artefact = persistence.load(live.artefact, directory=_artefacts(args))
@@ -174,12 +185,13 @@ def _render(verdict: decision.Decision, model_name: str) -> str:
         [
             f"{verdict.priority.value.upper()}  {verdict.recommendation}",
             "",
-            f"  late-delivery risk   {verdict.probability:.4f}"
-            f"  (flagged above {verdict.threshold:.4f})",
-            f"  order total          {verdict.order_total:,.2f}",
-            f"  expected profit      {verdict.expected_profit:,.2f}",
-            f"  value at risk        {verdict.value_at_risk:,.2f}",
-            f"  net benefit of act   {verdict.net_benefit:,.2f}",
+            f"  chance of being late  {verdict.probability:.1%}"
+            f"  (flagged above {verdict.threshold:.1%}; on an order this"
+            f" size acting pays above {verdict.break_even:.1%})",
+            f"  order total           {verdict.order_total:,.2f}",
+            f"  expected profit       {verdict.expected_profit:,.2f}",
+            f"  money at risk         {verdict.value_at_risk:,.2f}",
+            f"  net saving if we act  {verdict.net_benefit:,.2f}",
             "",
             f"  model: {model_name}",
         ]
@@ -187,15 +199,19 @@ def _render(verdict: decision.Decision, model_name: str) -> str:
 
 
 def _add_source(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--data", default=str(FULL_DATA), help="the source CSV")
-    parser.add_argument("--sample", action="store_true", help="use the committed 500-row slice")
+    parser.add_argument("--data", default=str(FULL_DATA), help="path to the full dataset CSV")
+    parser.add_argument(
+        "--sample",
+        action="store_true",
+        help="use the small 500-order sample instead, no download needed",
+    )
 
 
 def _add_artefacts(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--artefacts",
         default=str(persistence.ARTEFACTS_DIR),
-        help="the directory artefacts are loaded from, and never outside it",
+        help="folder the trained models are read from, and never outside it",
     )
 
 
@@ -203,40 +219,62 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="chainsight", description=_DESCRIPTION)
     subcommands = parser.add_subparsers(dest="command", required=True)
 
-    described = subcommands.add_parser("describe", help="what the table is, and what ingest drops")
+    described = subcommands.add_parser(
+        "describe", help="show what is in the dataset, and what gets thrown away"
+    )
     _add_source(described)
     described.set_defaults(run=describe)
 
-    leaked = subcommands.add_parser("leakage", help="what the forbidden columns are worth")
+    leaked = subcommands.add_parser("leakage", help="show how much a model gains by cheating")
     _add_source(leaked)
     leaked.set_defaults(run=leak)
 
-    compared = subcommands.add_parser("compare", help="every candidate against the baselines")
+    compared = subcommands.add_parser(
+        "compare", help="score every model against the simple ones worth beating"
+    )
     _add_source(compared)
-    compared.add_argument("--only", nargs="+", metavar="MODEL", help=f"one of: {models.names()}")
-    compared.add_argument("--margin", action="store_true", help="the margin table instead")
+    compared.add_argument(
+        "--only", nargs="+", metavar="MODEL", help=f"limit to these models: {models.names()}"
+    )
+    compared.add_argument(
+        "--margin", action="store_true", help="compare profit models instead of late-risk ones"
+    )
     compared.set_defaults(run=rank)
 
-    trained = subcommands.add_parser("train", help="fit the production model and register it")
+    trained = subcommands.add_parser("train", help="train a model and save it")
     _add_source(trained)
     _add_artefacts(trained)
-    trained.add_argument("--model", default=training.PRODUCTION_MODEL, help="which candidate")
-    trained.add_argument("--note", default="", help="why this run happened")
-    trained.add_argument("--promote", action="store_true", help="make it live if it wins")
-    trained.add_argument("--force", action="store_true", help="promote even if it loses")
+    trained.add_argument("--model", default=training.PRODUCTION_MODEL, help="which model to train")
+    trained.add_argument("--note", default="", help="a note to yourself about why you ran this")
+    trained.add_argument(
+        "--promote", action="store_true", help="start scoring with it, if it beats the current one"
+    )
+    trained.add_argument(
+        "--force", action="store_true", help="switch to it even if it scores worse"
+    )
     trained.set_defaults(run=train)
 
-    listed = subcommands.add_parser("registry", help="what is trained and what is serving")
+    listed = subcommands.add_parser(
+        "registry", help="list trained models and show which one is in use"
+    )
     _add_artefacts(listed)
-    listed.add_argument("--promote", type=int, metavar="VERSION", help="make this version live")
-    listed.add_argument("--metric", default=registry.DEFAULT_METRIC, help="what to compare on")
-    listed.add_argument("--force", action="store_true", help="promote even if it loses")
+    listed.add_argument(
+        "--promote", type=int, metavar="VERSION", help="start scoring with this version"
+    )
+    listed.add_argument(
+        "--metric", default=registry.DEFAULT_METRIC, help="which score to compare them on"
+    )
+    listed.add_argument("--force", action="store_true", help="switch to it even if it scores worse")
     listed.set_defaults(run=show_registry)
 
-    predicted = subcommands.add_parser("predict", help="one order, one decision")
+    predicted = subcommands.add_parser(
+        "predict", help="score one order and say what to do about it"
+    )
     _add_artefacts(predicted)
-    predicted.add_argument("order", nargs="?", help="a JSON file of the at-order fields")
-    predicted.add_argument("--template", action="store_true", help="print a blank order and exit")
+    predicted.add_argument("order", nargs="?", help="a JSON file holding the order's details")
+    predicted.add_argument(
+        "--template", action="store_true", help="print a blank order file to fill in, and exit"
+    )
     predicted.set_defaults(run=predict)
 
     return parser

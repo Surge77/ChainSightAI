@@ -1,14 +1,16 @@
 {% extends "base.html" %}
 {% import "_macros.html" as ui %}
-{% block title %}Control tower — ChainSight{% endblock %}
+{% block title %}Dashboard — ChainSight{% endblock %}
 
 {% block content %}
-  <h1>Control tower</h1>
+  <h1>Dashboard</h1>
   <p class="lede">
     {% if live %}
-      Serving registry version {{ live.version }} — {{ live.model_name }}.
+      Every order is being scored by <strong>{{ live.model_name }}</strong>,
+      version {{ live.version }}.
     {% else %}
-      Nothing is promoted, so nothing is being scored. <a href="/admin/models">Train a model</a>.
+      No model is switched on yet, so no order is being scored.
+      <a href="/admin/models">Train one</a>.
     {% endif %}
   </p>
 
@@ -16,26 +18,36 @@
     <div class="card">
       <p class="figure-label">Orders</p>
       <p class="figure">{{ summary.orders }}</p>
-      <p class="figure-note">{{ summary.scored }} of them scored.</p>
+      <p class="figure-note">{{ summary.scored }} of them have been scored.</p>
     </div>
     <div class="card">
-      <p class="figure-label">Flagged</p>
+      <p class="figure-label">Above the risk cut-off</p>
       <p class="figure">{{ "%.0f%%"|format(summary.flagged_share * 100) }}</p>
       <p class="figure-note">
-        {{ summary.flagged }} above the derived threshold. At a threshold of 0.5 this number
-        would be smaller and the misses would cost more than the false alarms saved.
+        {{ summary.flagged }} of {{ summary.scored }} scored orders. This is a risk label, not
+        an instruction. The cut-off is calibrated on an order of typical value, so a cheaper
+        order can sit above it and still not repay the cost of acting — what to act on is the
+        next card.
       </p>
     </div>
     <div class="card">
-      <p class="figure-label">Value at risk</p>
+      <p class="figure-label">Money at risk</p>
       <p class="figure">{{ "%.2f"|format(summary.value_at_risk) }}</p>
-      <p class="figure-note">Summed exposure across the latest score for each order.</p>
+      <p class="figure-note">
+        Everything late deliveries are expected to cost, across all orders, using each
+        order's most recent score. The next card splits it.
+      </p>
     </div>
     <div class="card">
-      <p class="figure-label">Worth acting on</p>
+      <p class="figure-label">Recoverable</p>
       <p class="figure">{{ "%.2f"|format(summary.net_benefit_available) }}</p>
       <p class="figure-note">
-        Exposure less the cost of intervening, counting only orders where that is positive.
+        {{ "%.0f%%"|format(summary.recoverable_share * 100) }} of the money at risk, on the
+        {{ summary.actionable }} of {{ summary.scored }} scored orders that repay the cost of
+        stepping in. Acting on those costs
+        {{ "%.2f"|format(summary.cost_of_acting) }} and is already subtracted here; the
+        other {{ "%.2f"|format(summary.absorbed_exposure) }} sits on orders where acting
+        would cost more than it saves, and is being carried rather than spent against.
       </p>
     </div>
   </div>
@@ -55,34 +67,50 @@
         </tbody>
       </table>
       <p class="caption">
-        Priority is net benefit, not probability. A typical order in this catalogue cannot
-        reach critical however risky it is, because every order is under 500 and the fixed
-        goodwill penalty is the larger half of a typical exposure.
+        Priority is set by how much is worth acting on, not by how likely the order is to be
+        late.
       </p>
+      <details class="why">
+        <summary>Why does almost nothing reach "critical"?</summary>
+        <p>
+          Because of what is in this catalogue. Every order in it is worth under 500, and the
+          fixed goodwill cost of a late delivery is the larger half of the damage on a typical
+          one — so a typical order simply cannot expose enough money to clear the critical
+          band, however risky it is. You would see criticals in a business with a wider price
+          range.
+        </p>
+      </details>
     {% else %}
       <p>No scored orders yet.</p>
     {% endif %}
   </div>
 
-  <h2>Mean predicted risk by shipping mode</h2>
+  <h2>Average risk by shipping mode</h2>
   <div class="card">
     <canvas id="by-mode" class="chart" height="140"></canvas>
     <p class="caption">
-      Predicted risk on the orders entered here — not an observed late rate. Shipping mode is
-      the one field with a wide spread in this dataset: the audit measured 57 points across
-      its four values, against 0.9 for market.
+      This is what the model predicts for the orders entered here. It is
+      not an observed late rate, so it does not tell you how often these orders actually
+      arrived late. Shipping mode is the field that separates orders most sharply: 57
+      points between its best and worst values, against 0.9 points for market.
     </p>
     {{ ui.group_table(summary.by_shipping_mode, noisy_below) }}
   </div>
 
-  <h2>Mean predicted risk by region</h2>
+  <h2>Average risk by region</h2>
   <div class="card">
     <canvas id="by-region" class="chart" height="200"></canvas>
     <p class="caption">
-      The axis runs from zero to one deliberately. Regional late rate on this dataset varies
-      by about five points around a base rate of 0.5483, and an axis cropped to the data
-      would turn that into a dramatic-looking chart of almost nothing.
+      Regions barely differ: about five points either side of an overall late rate of 54.8%.
     </p>
+    <details class="why">
+      <summary>Why does the chart go all the way to 100% when the bars are so similar?</summary>
+      <p>
+        On purpose. Cropping the axis to fit the data would stretch a five-point spread across
+        the full width and make near-identical regions look dramatically different. The bars
+        being nearly the same length is the finding.
+      </p>
+    </details>
     {{ ui.group_table(summary.by_region, noisy_below) }}
   </div>
 {% endblock %}
@@ -101,7 +129,7 @@
         type: "bar",
         data: {
           labels,
-          datasets: [{ label: "mean predicted risk", data: values, backgroundColor: "#40618a" }],
+          datasets: [{ label: "average predicted risk", data: values, backgroundColor: "#40618a" }],
         },
         options: {
           indexAxis: "y",
@@ -112,7 +140,7 @@
           // grow.
           animation: false,
           plugins: { legend: { display: false } },
-          scales: { x: { min: 0, max: 1, title: { display: true, text: "predicted probability" } } },
+          scales: { x: { min: 0, max: 1, title: { display: true, text: "chance of being late" } } },
         },
       });
     };

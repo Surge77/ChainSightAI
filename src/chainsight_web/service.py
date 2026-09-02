@@ -54,8 +54,9 @@ class ModelService:
         entry = self.known.current()
         if entry is None:
             raise ServiceError(
-                "no model has been promoted, so there is nothing to predict with. "
-                "Train one from the admin pages, or run `chainsight train --promote`."
+                "No model is switched on yet, so there is nothing to score orders with. "
+                "An administrator can train one from the Models page, or run "
+                "`chainsight train --promote` on the server."
             )
 
         if self._cached is None or self._cached[0] != entry.version:
@@ -69,7 +70,9 @@ class ModelService:
             # The loader's refusals are the interesting ones -- a feature-set mismatch, a
             # library that has moved -- and passing the sentence through keeps the reason
             # visible instead of turning it into a bare 500.
-            raise ServiceError(f"the promoted model cannot be loaded: {refusal}") from refusal
+            raise ServiceError(
+                f"The model that is switched on cannot be loaded: {refusal}"
+            ) from refusal
 
     def probability_for(self, order: Order) -> tuple[registry.Version, float]:
         """The late-delivery probability for one stored order, through the live model."""
@@ -118,6 +121,7 @@ def costs_in(session: Session) -> decision.CostModel:
 
     return decision.CostModel(
         intervention=stored.intervention,
+        intervention_effectiveness=stored.intervention_effectiveness,
         margin_lost_when_late=stored.margin_lost_when_late,
         fixed_penalty_when_late=stored.fixed_penalty_when_late,
         mean_margin=stored.mean_margin,
@@ -139,6 +143,7 @@ def predict_for(session: Session, service: ModelService, order: Order) -> Predic
         model_name=entry.model_name,
         probability=verdict.probability,
         threshold=verdict.threshold,
+        break_even=verdict.break_even,
         expected_profit=verdict.expected_profit,
         value_at_risk=verdict.value_at_risk,
         net_benefit=verdict.net_benefit,

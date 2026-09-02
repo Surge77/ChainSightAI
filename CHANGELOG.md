@@ -6,7 +6,44 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+- `intervention_effectiveness` on the cost model: the share of the damage stepping in is
+  assumed to prevent, editable at `/admin/costs` and dated and attributed like every other
+  cost. It defaults to 1.0, which is the assumption the decision engine was already making
+  without saying so — `net benefit = value at risk − intervention` claims that paying to
+  expedite removes the whole expected cost of lateness. `docs/decision_engine.md` shows what
+  lowering it does: at 0.6 the recoverable total over the same orders falls by three
+  quarters.
+- A per-order break-even probability, stored beside the threshold on every prediction and
+  shown on the order's report. One global cut-off cannot be the break-even for a catalogue
+  running from a few rupees to 499.95, and this is the number the order's priority is
+  actually decided on.
+
+### Changed
+- The dashboard's "worth acting on" card is now "Recoverable", and carries the share of
+  exposure it represents, how many orders it covers, what acting on them costs, and the
+  exposure being carried on the orders where acting would cost more than it saves. The card
+  previously invited a subtraction against "money at risk" that did not hold: the gap was
+  the cost of acting *plus* the exposure on excluded orders, and only the first was implied.
+- "Worth acting on" is no longer the name of a money column on `/orders` and a report
+  figure, because it is also the plain-English gloss of the `high` band in the legend
+  directly beneath that column. Both are now "net saving if we act".
+- The dashboard's flagged card is "Above the risk cut-off", and says it is a risk label
+  rather than an instruction.
+
 ### Fixed
+- The flagging threshold and the ranking were computed from different assumptions about who
+  pays for an intervention, so they contradicted each other on screen: orders between 0.2966
+  and 0.4216 were counted as flagged and ranked `LOW`, which reads "leave it". The threshold
+  was `intervention / (intervention + late cost)` — Elkan's false-positive rule, which
+  charges the intervention only when it turns out to have been unnecessary — while net
+  benefit charged it always. Both now derive from one accounting, and the threshold on the
+  default costs is 0.4216 rather than 0.2966. [ADR 0011](docs/adr/0011-one-set-of-books.md)
+  records the correction; [ADR 0006](docs/adr/0006-derive-the-threshold.md) is marked as
+  corrected rather than rewritten.
+- The application refuses to start against a database that predates a column, naming the
+  column and both ways out, instead of failing as a 500 inside a template on the first
+  request that reads it.
 - `init --reset-password` no longer moves the account's role. `--operator` defaulted to
   "administrator" when it was absent, so the natural way to help a locked-out operator —
   `init --email them --reset-password` — silently promoted them, and the same flag on an

@@ -8,9 +8,10 @@ Three things are kept deliberately separate here:
 
 **The model** says how likely a late delivery is. It knows nothing about money.
 
-**The cost model** says what a late delivery costs and what intervening costs. Every number
-in it is an assumption, none of it is learned from the data, and `docs/decision_engine.md`
-argues each one. It is a `dataclass` so an admin can change it without touching this file.
+**The cost model** says what a late delivery costs, what intervening costs, and how much of
+the damage intervening actually prevents. Every number in it is an assumption, none of it is
+learned from the data, and `docs/decision_engine.md` argues each one. It is a `dataclass` so
+an admin can change it without touching this file.
 
 **The engine** combines them. It is arithmetic, it is deterministic, and it is tested
 separately from the model, because a bug here does not crash -- it produces a confidently
@@ -66,6 +67,16 @@ class CostModel:
     #: Small, because the average order it would be spent on is worth 176.88.
     intervention: float = 15.0
 
+    #: The share of the damage an intervention is assumed to prevent. 1.0 says expediting
+    #: always works, which is optimistic and almost certainly wrong -- but it is the
+    #: assumption this engine made silently before the field existed, and inventing a
+    #: smaller number would assert something about a business this dataset does not record.
+    #: It is here to be lowered by whoever has the carrier data to lower it with. Lowering
+    #: it raises the threshold and shrinks every net benefit; below about 0.75 the largest
+    #: order in this catalogue can no longer reach CRITICAL, so the bands need rescaling
+    #: with it. `docs/decision_engine.md` shows the sensitivity.
+    intervention_effectiveness: float = 1.0
+
     #: The share of an order's margin assumed lost when it arrives late.
     margin_lost_when_late: float = 0.5
 
@@ -77,8 +88,9 @@ class CostModel:
     mean_margin: float = TRAINING_MEAN_MARGIN
 
     #: The order the single global threshold is calibrated against. Per-order economics are
-    #: handled by `net_benefit`, which does not use the threshold at all; the threshold
-    #: exists for the risk label an operator reads at a glance.
+    #: handled by `net_benefit`, which does not use the threshold at all, and by
+    #: `Decision.break_even`, which is the same sum done with the order's own value. The
+    #: threshold exists for the risk label an operator reads at a glance.
     typical_order_value: float = TRAINING_MEAN_ORDER_VALUE
 
     #: Net benefit above which an order is CRITICAL, then HIGH, then MONITOR. The largest
@@ -90,6 +102,12 @@ class CostModel:
     def __post_init__(self) -> None:
         if self.intervention <= 0:
             raise ValueError("intervention must cost something, or every order is worth acting on")
+        if not 0.0 < self.intervention_effectiveness <= 1.0:
+            raise ValueError(
+                "intervention_effectiveness is the share of the damage acting prevents, so it "
+                "belongs in (0, 1]. At zero nothing is ever worth doing and the threshold is "
+                "undefined."
+            )
         if not 0.0 <= self.margin_lost_when_late <= 1.0:
             raise ValueError("margin_lost_when_late is a share, so it belongs in [0, 1]")
         if not self.critical_above > self.high_above > self.monitor_above:
@@ -97,20 +115,30 @@ class CostModel:
 
     @property
     def threshold(self) -> float:
-        """The probability above which intervening is worth it on an average order.
+        """The probability above which intervening pays on an order of typical value.
 
-        The standard cost-sensitive rule. Acting on an order that would have arrived on time
-        wastes `intervention`; failing to act on one that arrives late costs
-        `late_cost_of_an_average_order`. Setting the two expected costs equal gives
+        Not acting costs `p x late_cost`. Acting costs `intervention`, plus whatever the
+        intervention fails to prevent, `(1 - effectiveness) x p x late_cost`. Setting the two
+        equal gives
 
-            p* = intervention / (intervention + cost of a late delivery)
+            p* = intervention / (effectiveness x cost of a late delivery)
 
-        which on the default numbers is about 0.30 -- well below 0.5. That is the point of
-        deriving it: a threshold of 0.5 silently assumes the two mistakes cost the same, and
-        here a missed late delivery costs a little over twice an unnecessary intervention.
+        which on the default numbers is 0.4216. Still below 0.5 -- a missed late delivery
+        costs more than an unnecessary intervention, and deriving that rather than rounding
+        at half is the whole point -- but not as far below as the
+        `intervention / (intervention + late cost)` this project used until the two halves of
+        its own arithmetic were checked against each other. That form is Elkan's
+        false-positive rule, and it holds only when acting on an order that really was going
+        to be late is free. Here it is not: `net_benefit` subtracts the intervention whatever
+        the outcome. A threshold kept on different books from the ranking is a threshold that
+        contradicts it, and it did -- orders between 0.2966 and 0.4216 were flagged as needing
+        attention and ranked LOW, which reads "leave it", on the same screen.
+
+        One number calibrated on `typical_order_value` cannot be right for every order in a
+        catalogue. A cheaper order needs more risk before acting pays and a dearer one needs
+        less; `Decision.break_even` is this same sum done with the order's own value.
         """
-        late_cost = self.late_cost(self.typical_order_value)
-        return self.intervention / (self.intervention + late_cost)
+        return _break_even(self, self.typical_order_value)
 
     def expected_profit(self, order_total: float) -> float:
         """Measured mean margin times a known order total. Not a prediction."""
@@ -120,6 +148,17 @@ class CostModel:
         """What one late delivery on this order is assumed to cost."""
         margin_at_risk = self.expected_profit(order_total) * self.margin_lost_when_late
         return margin_at_risk + self.fixed_penalty_when_late
+
+
+def _break_even(costs: CostModel, order_total: float) -> float:
+    """The probability at which acting on an order of this size stops being a loss.
+
+    Clamped at 1. When an intervention cannot recover its own cost the honest answer is that
+    no probability justifies it, and "we flag anything above 140%" is not a sentence an
+    interface can render.
+    """
+    recoverable = costs.intervention_effectiveness * costs.late_cost(order_total)
+    return min(1.0, costs.intervention / recoverable)
 
 
 @dataclass(frozen=True)
@@ -133,11 +172,26 @@ class Decision:
     net_benefit: float
     priority: Priority
     threshold: float
+    #: The break-even probability for this order's own value, which is what `net_benefit` is
+    #: judged against. It differs from `threshold` for every order not worth
+    #: `typical_order_value`, and the report says so rather than leaving an operator to
+    #: reconcile a flag against a priority that disagrees with it.
+    break_even: float
     recommendation: str
 
     @property
     def is_flagged(self) -> bool:
+        """Above the catalogue-wide risk cut-off. A risk label, not an instruction.
+
+        `is_worth_acting_on` is the instruction. The two agree on an order of typical value
+        and diverge either side of it, which is what one global cut-off costs.
+        """
         return self.probability >= self.threshold
+
+    @property
+    def is_worth_acting_on(self) -> bool:
+        """Whether stepping in is expected to save more than it costs on this order."""
+        return self.net_benefit > 0
 
 
 def decide(probability: float, order_total: float, costs: CostModel | None = None) -> Decision:
@@ -163,7 +217,7 @@ def decide(probability: float, order_total: float, costs: CostModel | None = Non
     costs = costs or CostModel()
     expected_profit = costs.expected_profit(order_total)
     value_at_risk = probability * costs.late_cost(order_total)
-    net_benefit = value_at_risk - costs.intervention
+    net_benefit = costs.intervention_effectiveness * value_at_risk - costs.intervention
 
     priority = _priority(net_benefit, costs)
     return Decision(
@@ -174,6 +228,7 @@ def decide(probability: float, order_total: float, costs: CostModel | None = Non
         net_benefit=net_benefit,
         priority=priority,
         threshold=costs.threshold,
+        break_even=_break_even(costs, order_total),
         recommendation=_recommendation(priority, probability, costs),
     )
 
@@ -192,12 +247,21 @@ def _recommendation(priority: Priority, probability: float, costs: CostModel) ->
     """One sentence an operator can act on, naming the reason rather than the number."""
     risk = f"{probability:.0%}"
     if priority is Priority.CRITICAL:
-        return f"Expedite now. {risk} risk on an order large enough to justify the cost."
+        return (
+            f"Act on this now. {risk} chance of arriving late, on an order big enough that "
+            "sorting it out pays for itself several times over."
+        )
     if priority is Priority.HIGH:
-        return f"Worth intervening. {risk} risk, and acting costs less than the exposure."
+        return (
+            f"Worth stepping in. {risk} chance of arriving late, and sorting it out costs "
+            "less than letting it happen."
+        )
     if priority is Priority.MONITOR:
         return (
-            f"Watch it. {risk} risk, but the exposure barely covers "
-            f"the {costs.intervention:.0f} it would cost to act."
+            f"Keep an eye on it. {risk} chance of arriving late, but you would barely cover "
+            f"the {costs.intervention:.0f} it costs to step in."
         )
-    return f"Leave it. At {risk} risk this order is not worth the cost of intervening."
+    return (
+        f"Leave this one. At a {risk} chance of arriving late, stepping in would cost more "
+        "than it saves."
+    )

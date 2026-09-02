@@ -91,6 +91,7 @@ class CostInput(BaseModel):
     """
 
     intervention: float = Field(gt=0.0)
+    intervention_effectiveness: float = Field(gt=0.0, le=1.0)
     margin_lost_when_late: float = Field(ge=0.0, le=1.0)
     fixed_penalty_when_late: float = Field(ge=0.0)
     mean_margin: float = Field(ge=0.0, le=1.0)

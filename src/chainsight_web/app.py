@@ -20,7 +20,12 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from chainsight_web import routes_accounts, routes_admin, routes_auth, routes_orders
 from chainsight_web.config import Settings
-from chainsight_web.database import build_engine, build_sessions, create_tables
+from chainsight_web.database import (
+    build_engine,
+    build_sessions,
+    create_tables,
+    verify_schema,
+)
 from chainsight_web.dependencies import verify_csrf
 from chainsight_web.service import ModelService
 from chainsight_web.templating import STATIC_DIR, render
@@ -42,6 +47,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app = FastAPI(title=TITLE, description=DESCRIPTION, dependencies=[Depends(verify_csrf)])
     engine = build_engine(settings.database_url)
     create_tables(engine)
+    verify_schema(engine)
 
     app.state.settings = settings
     app.state.engine = engine
