@@ -5,6 +5,50 @@
 [![License: MIT](https://img.shields.io/badge/licence-MIT-green)](LICENSE)
 [![Checked with pyright](https://img.shields.io/badge/types-pyright-blue)](https://github.com/microsoft/pyright)
 
+## What this is, in plain terms
+
+An order has been placed and has not shipped yet. ChainSight estimates **how likely it is to
+arrive late**, works out **how much money that would cost you**, and then tells you the one
+thing you actually want to know: **is this order worth doing something about?**
+
+That last step is the point. Being told an order is 90% likely to be late is not useful on
+its own — if the order is worth twenty rupees, chasing it costs more than losing it. So
+orders are ranked by what acting on them is worth, not by how risky they are.
+
+It comes as a web app (sign in, enter orders, read the reports) and a command line.
+
+### Try it in two minutes
+
+```bash
+python -m venv .venv
+.venv/Scripts/activate          # Windows;  source .venv/bin/activate elsewhere
+pip install -e ".[web,dev]"
+
+# Everything below runs on the 500-order sample in this repository.
+# No 92 MB download needed.
+python -m chainsight train --sample --promote   # train a model and switch it on
+python -m chainsight predict --template > order.json
+python -m chainsight predict order.json         # score one order
+```
+
+To use the web app instead:
+
+```bash
+python -m chainsight_web init --email you@example.com   # your administrator account
+python -m chainsight_web serve                          # then open http://127.0.0.1:8000
+```
+
+New to the vocabulary on those pages? [`docs/glossary.md`](docs/glossary.md) defines every
+term, with the measured number attached wherever there is one.
+
+> **This is a demo.** It is a real, working application, but it runs on a historical public
+> dataset. It is not connected to any live shipments. See
+> [This is not a live system](#this-is-not-a-live-system).
+
+---
+
+## Why it works the way it does
+
 **For an order that has not shipped yet, ChainSight answers two questions and turns them
 into one decision.**
 
@@ -116,6 +160,8 @@ run on Python 3.11 and 3.12. 516 tests; `src/` at 100% line and branch coverage.
 
 ## Getting started
 
+To just run it, see [Try it in two minutes](#try-it-in-two-minutes) above. To work on it:
+
 ```bash
 python -m venv .venv
 .venv/Scripts/activate          # Windows;  source .venv/bin/activate elsewhere
@@ -139,17 +185,21 @@ margin ratio: mean 0.1200, 16.2000% loss-making
 
 $ python -m chainsight train --sample --promote
 one-hot random forest: fitted on 347 orders, scored on 65
-threshold       0.2966 (derived from the cost model, not assumed)
-registered as version 1
-promoted version 1; it is now serving
+threshold       0.4216 (derived from the cost model, not assumed)
+saved as version 1
+version 1 now scores orders
 
 $ python -m chainsight predict order.json
-HIGH  Worth intervening. 75% risk, and acting costs less than the exposure.
+HIGH  Worth stepping in. 55% chance of arriving late, and sorting it out costs less than
+letting it happen.
 
-  late-delivery risk   0.7478  (flagged above 0.2966)
-  order total          191.99
-  value at risk        27.28
-  net benefit of act   12.28
+  chance of being late  54.6%  (flagged above 42.2%; on an order this size acting pays above 27.9%)
+  order total           479.95
+  expected profit       57.40
+  money at risk         29.30
+  net saving if we act  14.30
+
+  model: one-hot random forest
 ```
 
 `predict --template` prints a blank order with every field an order needs, because
@@ -175,24 +225,29 @@ python -m chainsight_web serve                         # http://127.0.0.1:8000
 There is no default session secret and the process will not start without one. A default in
 a public repository is a forged-session vulnerability with the key published beside it.
 
-An **operator** enters an order — the same sixteen at-order fields the model was trained on,
-with the dropdowns built from the categories it was actually fitted on — and gets a report:
-the risk, the expected profit, the exposure, and the net benefit that decides the priority.
-An **administrator** additionally sees the control tower, the model registry and the cost
-model, and can retrain and promote from the browser.
+An **ordinary account** enters an order — the same sixteen at-order fields the model was
+trained on, with the dropdowns built from the categories it was actually fitted on — and gets
+a report: the chance of being late, the expected profit, the money at risk, and how much
+acting is worth, which is what sets the priority. An **administrator** additionally gets the
+dashboard, the model list and the cost settings, and can retrain and switch models from the
+browser.
+
+The pages say all of this in plain language and keep the reasoning behind each decision in a
+fold-away *Why* block, so the interface can be used without reading the argument first.
 
 Four things about it are worth stating, because each is a decision rather than a default:
 
-- **Promotion compares before it promotes**, through the same `registry.promote` the CLI
-  uses. A retrain that scores below the model already serving is refused and the refusal is
-  written to `training_runs` with its reason — that row is what answers "why is the serving
-  model three weeks old".
+- **Switching models compares first**, through the same `registry.promote` the CLI uses. A
+  retrain that scores below the model already in use is refused, and the refusal is written
+  to `training_runs` with its reason — that row is what answers "why is the model in use
+  three weeks old".
 - **Ownership is a `WHERE` clause**, not a check after the fetch, and a missing order and
-  somebody else's order are the same 404.
+  somebody else's order are the same 404 — so an id that exists cannot be told apart from
+  one that does not.
 - **The admin role is read from the database on every request.** Granting or revoking it
   takes effect immediately, because nothing about the role is cached in the cookie.
 - **Retraining reads a file on the server.** Nothing entered through the UI reaches the
-  training set, so an operator cannot poison it through the order form.
+  training set, so an ordinary account cannot poison it through the order form.
 
 The charts are held to the same standard as the rest of the project. They plot *predicted*
 risk on entered orders rather than an observed late rate, every mean carries its sample size,

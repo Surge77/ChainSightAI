@@ -138,7 +138,7 @@ class TestPromote:
         known.register(replace(manifest_scoring(0.75), scores={"accuracy": 0.9}), "artefact-b")
         known.promote(1)
 
-        with pytest.raises(RegistryError, match="does not record it"):
+        with pytest.raises(RegistryError, match=r"has no .* score"):
             known.promote(2)
 
     def test_a_different_metric_can_be_named(self, known: Registry) -> None:

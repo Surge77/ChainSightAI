@@ -21,9 +21,38 @@ SMALL_ORDER = 20.0
 
 
 class TestCostModel:
-    def test_the_default_threshold_is_well_below_a_half(self) -> None:
+    def test_the_default_threshold_is_below_a_half(self) -> None:
         """A threshold of 0.5 assumes the two mistakes cost the same. Here they do not."""
-        assert CostModel().threshold < 0.4
+        assert CostModel().threshold < 0.5
+
+    def test_the_threshold_is_the_break_even_probability_it_claims_to_be(self) -> None:
+        """The flag and the ranking have to be kept on the same books.
+
+        `net_benefit` charges the intervention whatever the outcome, so the probability at
+        which acting stops being a loss is `intervention / (effectiveness x late cost)`.
+        Deriving the threshold any other way -- this project used
+        `intervention / (intervention + late cost)` -- flags orders that the ranking then
+        calls LOW, and an operator is left holding two answers to one question.
+        """
+        costs = CostModel()
+
+        break_even = costs.intervention / (
+            costs.intervention_effectiveness * costs.late_cost(costs.typical_order_value)
+        )
+
+        assert costs.threshold == pytest.approx(break_even)
+
+    def test_a_less_effective_intervention_raises_the_threshold(self) -> None:
+        """Acting that prevents less of the damage has to clear a higher bar to be worth it."""
+        assert CostModel(intervention_effectiveness=0.5).threshold > CostModel().threshold
+
+    def test_an_effectiveness_outside_its_range_is_refused(self) -> None:
+        with pytest.raises(ValueError, match=r"\(0, 1\]"):
+            CostModel(intervention_effectiveness=0.0)
+
+    def test_an_intervention_that_can_never_repay_itself_flags_nothing(self) -> None:
+        """A cut-off above 100% is not a sentence any interface can render, so it clamps."""
+        assert CostModel(intervention=10_000.0).threshold == 1.0
 
     def test_making_intervention_cheaper_lowers_the_threshold(self) -> None:
         expensive = CostModel(intervention=1000.0)
@@ -124,15 +153,43 @@ class TestDecide:
         assert high.value_at_risk == pytest.approx(4 * low.value_at_risk)
 
     def test_flagging_uses_the_derived_threshold_rather_than_a_half(self) -> None:
-        """0.35 sits below 0.5 and above the derived 0.2966, so the two disagree here.
+        """0.45 sits below 0.5 and above the derived 0.4216, so the two disagree here.
 
         This is the case that makes deriving the threshold worth the trouble: at 0.5 this
         order is ignored, and on the default costs ignoring it is the wrong call.
         """
-        decision = decide(probability=0.35, order_total=TYPICAL_ORDER)
+        decision = decide(probability=0.45, order_total=TYPICAL_ORDER)
 
         assert decision.probability < 0.5
         assert decision.is_flagged
+
+    def test_the_flag_and_the_ranking_agree_on_an_order_of_typical_value(self) -> None:
+        """The threshold is calibrated on this order, so on this order they cannot disagree."""
+        above = decide(probability=0.43, order_total=TYPICAL_ORDER)
+        below = decide(probability=0.41, order_total=TYPICAL_ORDER)
+
+        assert above.is_flagged and above.is_worth_acting_on
+        assert not below.is_flagged and not below.is_worth_acting_on
+
+    def test_a_flagged_cheap_order_can_still_not_be_worth_acting_on(self) -> None:
+        """The divergence that survives, and the one the report has to name rather than hide.
+
+        One threshold serves a catalogue of many prices. A cheaper order has less to lose,
+        so it needs more risk before the same intervention repays itself, and `break_even`
+        is the number that says so on that order's own report.
+        """
+        decision = decide(probability=0.50, order_total=SMALL_ORDER)
+
+        assert decision.is_flagged
+        assert not decision.is_worth_acting_on
+        assert decision.break_even > decision.threshold
+
+    def test_a_less_effective_intervention_shrinks_the_saving(self) -> None:
+        certain = decide(0.8, TYPICAL_ORDER, CostModel())
+        halved = decide(0.8, TYPICAL_ORDER, CostModel(intervention_effectiveness=0.5))
+
+        assert halved.net_benefit < certain.net_benefit
+        assert halved.value_at_risk == pytest.approx(certain.value_at_risk)
 
     def test_a_probability_outside_zero_to_one_is_refused(self) -> None:
         with pytest.raises(ValueError, match=r"\[0, 1\]"):
@@ -187,6 +244,7 @@ def test_a_decision_carries_everything_the_report_needs_to_show() -> None:
         decision.value_at_risk,
         decision.net_benefit,
         decision.threshold,
+        decision.break_even,
     ):
         assert isinstance(value, float)
     assert decision.priority in Priority

@@ -181,6 +181,70 @@ class TestBranding:
         assert "currentColor" in body
 
 
+class TestThemeSwitch:
+    def test_a_visitor_can_reach_the_switch(self, client: TestClient) -> None:
+        """The sign-in page is themed for the same person the orders page is, so a control
+        you have to sign in to reach is a control that arrives after it was needed."""
+        assert 'id="theme-toggle"' in client.get("/login").text
+
+    def test_a_signed_in_operator_keeps_it(self, client: TestClient, operator: User) -> None:
+        assert 'id="theme-toggle"' in client.get("/orders").text
+
+    def test_the_switch_is_hidden_until_its_script_reveals_it(self, client: TestClient) -> None:
+        """Scripting off means no control at all, rather than one that does nothing."""
+        body = client.get("/login").text
+
+        assert body.index('id="theme-toggle"') < body.index("hidden>")
+
+    def test_the_script_runs_before_the_page_is_painted(self, client: TestClient) -> None:
+        """It writes the attribute the palette reads. Moved below the content it would paint
+        the system theme first and the chosen one second, which is a flash of the wrong
+        theme on every page load."""
+        body = client.get("/login").text
+
+        assert body.index("/static/theme.js") < body.index("<body>")
+        assert "defer" not in body[: body.index("<body>")]
+
+    def test_all_three_marks_ship_with_the_page(self, client: TestClient) -> None:
+        """theme.js shows one of them and hides the other two. Drawn by the script instead,
+        a broken mark would be invisible to a template and to this test alike."""
+        body = client.get("/login").text
+
+        for mode in ("system", "light", "dark"):
+            assert f'data-mode="{mode}"' in body
+
+    def test_the_marks_follow_the_theme(self, client: TestClient) -> None:
+        """An icon carrying its own colours is the one thing on the page a theme switch
+        cannot theme -- the same reason the wordmark is inlined rather than linked."""
+        body = client.get("/login").text
+        opened = body.index('id="theme-toggle"')
+        button = body[opened : body.index("</button>", opened)]
+
+        assert button.count("currentColor") >= 3
+
+    def test_the_script_is_served(self, client: TestClient) -> None:
+        response = client.get("/static/theme.js")
+
+        assert response.status_code == 200
+        assert "javascript" in response.headers["content-type"]
+
+    def test_the_stylesheet_answers_both_explicit_choices(self, client: TestClient) -> None:
+        """Without both, one direction of the switch silently does nothing: a visitor whose
+        system is dark could never get to light, which is the case that prompted this."""
+        stylesheet = client.get("/static/chainsight.css").text
+
+        assert ':root[data-theme="light"]' in stylesheet
+        assert ':root[data-theme="dark"]' in stylesheet
+
+    def test_no_choice_still_follows_the_system(self, client: TestClient) -> None:
+        """`color-scheme: light dark` is what leaves an unset preference to the operating
+        system, and what makes `light-dark()` in every token resolve at all."""
+        stylesheet = client.get("/static/chainsight.css").text
+
+        assert "color-scheme: light dark;" in stylesheet
+        assert "data-theme" not in stylesheet.split("color-scheme: light dark;")[0]
+
+
 class TestAdministratorSignIn:
     def test_an_administrator_lands_on_the_control_tower(
         self, client: TestClient, sessions: sessionmaker[Session]

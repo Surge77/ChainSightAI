@@ -5,15 +5,24 @@
   <h1>{{ status }}</h1>
   <p class="lede">{{ detail }}</p>
   <div class="card">
-    <p>
-      {% if status == 404 %}
-        Either there is no such order, or it belongs to somebody else. This page does not
-        say which, because saying which would confirm that an id exists.
-      {% elif status == 403 %}
-        You are signed in, but this page is for administrators.
-      {% else %}
-        <a href="/orders">Back to your orders</a>.
-      {% endif %}
-    </p>
+    {% if status == 404 %}
+      <p>
+        We cannot show you this. Either there is no such order, or it
+        belongs to somebody else.
+      </p>
+      {# The reason this page is deliberately vague is a good reason, and it is also not
+         what somebody who has just hit a dead end is trying to find out. #}
+      <details class="why">
+        <summary>Why doesn't it say which?</summary>
+        <p>
+          Saying which would confirm that an order number exists — which is precisely what
+          somebody working through order numbers one by one is hoping to learn. So both
+          answers look the same from out here.
+        </p>
+      </details>
+    {% elif status == 403 %}
+      <p>You are signed in, but this page is only for administrators.</p>
+    {% endif %}
+    <p><a href="/orders">Back to your orders</a></p>
   </div>
 {% endblock %}

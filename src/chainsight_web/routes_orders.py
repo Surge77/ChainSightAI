@@ -167,7 +167,9 @@ def order_report(
         select(Order).where(Order.id == order_id, Order.user_id == user.id)
     ).first()
     if order is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="no such order")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="We could not find that order."
+        )
 
     return render(
         request,

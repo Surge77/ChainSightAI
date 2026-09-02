@@ -118,7 +118,7 @@ class TestTrain:
         assert cli.main(sample_args("train", "--artefacts", str(artefacts))) == 0
 
         printed = capsys.readouterr().out
-        assert "registered as version 1" in printed
+        assert "saved as version 1" in printed
         assert "promoted" not in printed
         assert registry.Registry(path=artefacts / registry.REGISTRY_NAME).current() is None
 
@@ -134,7 +134,7 @@ class TestTrain:
     ) -> None:
         assert cli.main(sample_args("train", "--artefacts", str(artefacts), "--promote")) == 0
 
-        assert "now serving" in capsys.readouterr().out
+        assert "now scores orders" in capsys.readouterr().out
         assert registry.Registry(path=artefacts / registry.REGISTRY_NAME).current() is not None
 
     def test_a_note_is_carried_into_the_registry(self, artefacts: Path) -> None:
@@ -159,7 +159,7 @@ class TestTrain:
         code = cli.main(sample_args("train", "--artefacts", str(artefacts), "--promote"))
 
         assert code == 1
-        assert "not promoted" in capsys.readouterr().err
+        assert "not switched on" in capsys.readouterr().err
         current = known.current()
         assert current is not None and current.version == 1
 
@@ -183,7 +183,7 @@ class TestRegistryCommand:
 
         printed = capsys.readouterr().out
         assert "no models registered" in printed
-        assert "nothing promoted yet" in printed
+        assert "scoring orders: none yet" in printed
 
     def test_it_lists_what_is_trained(
         self, artefacts: Path, trained: registry.Version, capsys: pytest.CaptureFixture[str]
@@ -196,7 +196,7 @@ class TestRegistryCommand:
     ) -> None:
         assert cli.main(["registry", "--artefacts", str(artefacts), "--promote", "1"]) == 0
 
-        assert "is now serving" in capsys.readouterr().out
+        assert "now scores orders" in capsys.readouterr().out
 
     def test_a_refused_promotion_exits_nonzero_and_prints_the_reason(
         self, artefacts: Path, trained: registry.Version, capsys: pytest.CaptureFixture[str]
@@ -208,7 +208,7 @@ class TestRegistryCommand:
         code = cli.main(["registry", "--artefacts", str(artefacts), "--promote", "2"])
 
         assert code == 1
-        assert "Newer is not better" in capsys.readouterr().err
+        assert "Being newer does not make it better" in capsys.readouterr().err
 
     def test_the_metric_compared_on_can_be_named(
         self, artefacts: Path, trained: registry.Version
@@ -244,15 +244,15 @@ class TestPredict:
         assert cli.main(["predict", str(order_file), "--artefacts", str(artefacts)]) == 0
 
         printed = capsys.readouterr().out
-        assert "late-delivery risk" in printed
-        assert "net benefit of act" in printed
+        assert "chance of being late" in printed
+        assert "net saving if we act" in printed
         assert trained.model_name in printed
 
     def test_it_refuses_to_serve_when_nothing_has_been_promoted(
         self, artefacts: Path, trained: registry.Version, order_file: Path
     ) -> None:
         """A trained model is a candidate. Serving the newest thing in the list is the bug."""
-        with pytest.raises(SystemExit, match="nothing is promoted"):
+        with pytest.raises(SystemExit, match="No model is switched on"):
             cli.main(["predict", str(order_file), "--artefacts", str(artefacts)])
 
     def test_an_order_file_is_required_unless_a_template_was_asked_for(self) -> None:

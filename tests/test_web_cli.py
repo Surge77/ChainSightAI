@@ -101,7 +101,7 @@ class TestInit:
 
         assert code == 0
         assert accounts(environment)[0].password_hash == before
-        assert "password is unchanged" in capsys.readouterr().out
+        assert "password was left alone" in capsys.readouterr().out
 
     def test_a_rerun_does_not_even_ask_for_a_password(
         self, environment: Path, monkeypatch: pytest.MonkeyPatch
@@ -147,6 +147,82 @@ class TestInit:
 
         assert code == 1
         assert accounts(environment)[0].password_hash == before
+
+    def test_a_reset_does_not_promote_the_account_it_was_asked_to_unlock(
+        self, environment: Path
+    ) -> None:
+        """Helping a locked-out operator must not hand them the admin role on the way past."""
+        web_cli.main(
+            ["init", "--email", "op@b.co", "--password", "the forgotten password", "--operator"]
+        )
+
+        code = web_cli.main(
+            [
+                "init",
+                "--email",
+                "op@b.co",
+                "--password",
+                "a replacement password",
+                "--reset-password",
+            ]
+        )
+
+        assert code == 0
+        assert accounts(environment)[0].is_admin is False
+
+    def test_a_reset_does_not_demote_an_administrator_either(self, environment: Path) -> None:
+        web_cli.main(["init", "--email", "a@b.co", "--password", "the forgotten password"])
+
+        web_cli.main(
+            [
+                "init",
+                "--email",
+                "a@b.co",
+                "--password",
+                "a replacement password",
+                "--reset-password",
+            ]
+        )
+
+        assert accounts(environment)[0].is_admin is True
+
+    def test_a_reset_does_change_the_role_when_the_flag_is_actually_typed(
+        self, environment: Path
+    ) -> None:
+        """The role only moves when somebody asked for it, which is the whole distinction."""
+        web_cli.main(["init", "--email", "a@b.co", "--password", "the forgotten password"])
+
+        web_cli.main(
+            [
+                "init",
+                "--email",
+                "a@b.co",
+                "--password",
+                "a replacement password",
+                "--reset-password",
+                "--operator",
+            ]
+        )
+
+        assert accounts(environment)[0].is_admin is False
+
+    def test_a_reset_leaves_a_password_the_owner_has_to_replace(self, environment: Path) -> None:
+        """An administrator with a shell knows the password they just typed; it opens one door."""
+        web_cli.main(["init", "--email", "a@b.co", "--password", "the forgotten password"])
+        assert accounts(environment)[0].must_change_password is False
+
+        web_cli.main(
+            [
+                "init",
+                "--email",
+                "a@b.co",
+                "--password",
+                "a replacement password",
+                "--reset-password",
+            ]
+        )
+
+        assert accounts(environment)[0].must_change_password is True
 
     def test_the_stored_password_is_a_hash_and_not_the_password(self, environment: Path) -> None:
         web_cli.main(["init", "--email", "a@b.co", "--password", "a long enough password"])

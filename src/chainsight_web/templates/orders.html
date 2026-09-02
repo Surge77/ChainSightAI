@@ -4,9 +4,20 @@
 {% block content %}
   <h1>Your orders</h1>
   <p class="lede">
-    Ranked by net benefit — what acting is worth — rather than by probability. An order at
-    85% risk carrying real margin is a bigger problem than one at 90% carrying twenty.
+    Most worth acting on at the top. That is not the same as riskiest at the top: an order
+    that is 85% likely to be late but worth real money matters more than one that is 90%
+    likely and worth almost nothing.
   </p>
+
+  <details class="why">
+    <summary>What does "worth acting on" mean?</summary>
+    <p>
+      It is what you stand to save by stepping in, minus what stepping in costs. Chasing a
+      carrier or expediting a shipment is not free, so an order is only worth the trouble
+      when the money you would protect is bigger than the trouble. Sorting on risk alone
+      would put orders at the top that cost more to rescue than they are worth.
+    </p>
+  </details>
 
   {% if not rows %}
     <div class="card">
@@ -21,8 +32,8 @@
             <th>Shipping mode</th>
             <th>Destination</th>
             <th class="number">Total</th>
-            <th class="number">Risk</th>
-            <th class="number">Net benefit</th>
+            <th class="number">Chance of being late</th>
+            <th class="number">Net saving if we act</th>
             <th>Priority</th>
           </tr>
         </thead>
@@ -50,5 +61,14 @@
         </tbody>
       </table>
     </div>
+    {# Four coloured words with no key is a legend the reader has to infer from the ordering. #}
+    <p class="caption">
+      Priority in plain terms:
+      <span class="priority priority-critical">critical</span> act now ·
+      <span class="priority priority-high">high</span> worth acting on ·
+      <span class="priority priority-monitor">monitor</span> keep an eye on it ·
+      <span class="priority priority-low">low</span> leave it alone.
+      Click an order number to see how we got there.
+    </p>
   {% endif %}
 {% endblock %}

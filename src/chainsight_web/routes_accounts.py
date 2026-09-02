@@ -102,17 +102,17 @@ def set_role(
     """Grant or revoke the administrator role on an account that already exists."""
     subject = session.get(User, assignment.user_id)
     if subject is None:
-        return _back(error=f"there is no account {assignment.user_id}")
+        return _back(error=f"There is no account with id {assignment.user_id}.")
 
     if subject.is_admin == assignment.make_admin:
-        role = "an administrator" if subject.is_admin else "an operator"
-        return _back(notice=f"{subject.email} is already {role}; nothing changed")
+        role = "an administrator" if subject.is_admin else "an ordinary account"
+        return _back(notice=f"{subject.email} is already {role}. Nothing changed.")
 
     if not assignment.make_admin and _would_strand(session):
         return _back(
             error=(
-                f"{subject.email} is the only administrator. Removing the role would leave "
-                "nobody able to grant it back, so it has to be given to somebody else first."
+                f"{subject.email} is the only administrator left. Make somebody else an "
+                "administrator first, or there will be nobody able to grant the role back."
             )
         )
 
@@ -128,8 +128,8 @@ def set_role(
     )
     session.commit()
 
-    verb = "is now an administrator" if assignment.make_admin else "is now an operator"
-    return _back(notice=f"{subject.email} {verb}")
+    verb = "is now an administrator" if assignment.make_admin else "is no longer an administrator"
+    return _back(notice=f"{subject.email} {verb}.")
 
 
 @router.post("/users/new")
@@ -148,7 +148,7 @@ def create_account(
     """
     taken = session.scalars(select(User).where(User.email == submitted.email)).first()
     if taken is not None:
-        return _page(request, admin, session, error=f"{submitted.email} already has an account")
+        return _page(request, admin, session, error=f"{submitted.email} already has an account.")
 
     password = temporary_password()
     session.add(
@@ -165,7 +165,10 @@ def create_account(
         request,
         admin,
         session,
-        notice=f"{submitted.email} can sign in once with this password, then must replace it",
+        notice=(
+            f"Account created. Send the password below to {submitted.email} — it works "
+            "for one sign-in, and they choose their own after that."
+        ),
         issued=password,
         issued_to=submitted.email,
     )

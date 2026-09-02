@@ -13,20 +13,18 @@
       <p class="figure-label">Temporary password for {{ issued_to }}</p>
       <p class="issued-password">{{ issued }}</p>
       <p class="figure-note">
-        <strong>Shown once.</strong> It is not stored anywhere readable and this page will not
-        show it again. It works for a single sign-in, after which {{ issued_to }} has to
-        choose their own — so it is not a password you will still know tomorrow.
+        <strong>Copy this now — you will not see it again.</strong> It is not stored anywhere
+        you can read it back. Send it to {{ issued_to }}, who can sign in with it once and
+        will then have to choose their own.
       </p>
     </div>
   {% endif %}
 
   <div class="card">
-    <h2 style="margin-top:0">Create an account</h2>
+    <h2 style="margin-top:0">Add someone</h2>
     <p>
-      The password is generated rather than chosen, shown once, and good for one sign-in.
-      An administrator who picks somebody's password knows it afterwards, and every action by
-      that account becomes deniable; a one-use password does not have that problem. People
-      can also register themselves at <a href="/register">/register</a>.
+      Enter their email and we generate a one-time password for you to pass on. People can
+      also sign themselves up at <a href="/register">/register</a>.
     </p>
     <form class="stack" method="post" action="/admin/users/new">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
@@ -36,15 +34,26 @@
                placeholder="colleague@example.com" />
       </label>
       <div class="actions">
-        <button class="primary" type="submit">Create operator account</button>
-        <span class="caption">Grant the administrator role separately, below.</span>
+        <button class="primary" type="submit">Create account</button>
+        <span class="caption">Creates an ordinary account. Make it an administrator below.</span>
       </div>
     </form>
-    <p class="caption">
-      The first administrator is the exception, and has to be, because there is nobody to
-      grant it: <code>python -m chainsight_web init --email you@example.com</code> on the
-      server.
-    </p>
+    <details class="why">
+      <summary>Why can't I just choose their password?</summary>
+      <p>
+        Because then you would know it afterwards, and everything that account did could be
+        blamed on you having signed in as them. A password that works once and must be
+        replaced does not have that problem.
+      </p>
+    </details>
+    <details class="why">
+      <summary>How was the very first administrator created?</summary>
+      <p>
+        On the server, with <code>python -m chainsight_web init --email you@example.com</code>
+        — the one account that has to be made that way, because there was nobody yet to grant
+        it.
+      </p>
+    </details>
   </div>
 
   <div class="card scroll">
@@ -69,9 +78,9 @@
               {% if account.is_admin %}
                 <span class="priority priority-high">administrator</span>
               {% elif account.must_change_password %}
-                <span class="caption">operator — password not yet replaced</span>
+                <span class="caption">has not set their own password yet</span>
               {% else %}
-                <span class="caption">operator</span>
+                <span class="caption">ordinary account</span>
               {% endif %}
             </td>
             <td class="number">{{ orders }}</td>
@@ -92,18 +101,23 @@
       </tbody>
     </table>
     <p class="caption">
-      The last administrator cannot be demoted, whoever asks. An application with no
-      administrator has no way back in short of the command line, and that is one careless
-      click away on your own row.
+      The last remaining administrator cannot be demoted — including by themselves.
     </p>
+    <details class="why">
+      <summary>Why not?</summary>
+      <p>
+        An application with no administrator has no way back in short of the command line, and
+        on your own row that is one careless click away.
+      </p>
+    </details>
   </div>
 
-  <h2>Role changes</h2>
+  <h2>Who changed what</h2>
   <div class="card scroll">
     {% if changes %}
       <table>
         <thead>
-          <tr><th>When</th><th>Who</th><th>Change</th><th>Account</th></tr>
+          <tr><th>When</th><th>Who did it</th><th>What</th><th>To whom</th></tr>
         </thead>
         <tbody>
           {% for change in changes %}
@@ -119,12 +133,12 @@
         </tbody>
       </table>
       <p class="caption">
-        Kept whole, and shown here rather than only written. An audit nobody reads is a log.
-        The email addresses are stored on the row itself, so this stays legible after an
-        account is gone.
+        Every grant and revoke, kept in full and shown on the page rather than only written to
+        a file somewhere — an audit trail nobody reads is just a log. The email addresses are
+        copied onto each row, so this still makes sense after an account is deleted.
       </p>
     {% else %}
-      <p>No role has been granted or revoked from this application.</p>
+      <p>Nobody has been made or unmade an administrator from this application yet.</p>
     {% endif %}
   </div>
 {% endblock %}

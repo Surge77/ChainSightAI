@@ -1,6 +1,6 @@
 # 0006 — Derive the decision threshold from costs
 
-**Status:** accepted
+**Status:** accepted; the formula below is corrected by [0011](0011-one-set-of-books.md), which keeps the threshold and the ranking on the same accounting
 
 ## Context
 

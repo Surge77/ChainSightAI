@@ -122,7 +122,7 @@ def require_admin(user: Annotated[User | None, Depends(current_user)]) -> User:
     if not user.is_admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="this page is for administrators",
+            detail="This page is only for administrators.",
         )
     return user
 

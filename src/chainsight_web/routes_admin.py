@@ -102,7 +102,9 @@ def promote(
         return _back_to_models(error=str(refusal))
 
     service.forget()
-    return _back_to_models(notice=f"version {entry.version} ({entry.model_name}) is now serving")
+    return _back_to_models(
+        notice=f"Version {entry.version} ({entry.model_name}) is now scoring your orders."
+    )
 
 
 @router.post("/models/retrain")
@@ -115,7 +117,12 @@ def retrain(
 ) -> Response:
     """Fit a fresh model on the server's dataset, register it, and offer it to the guard."""
     if not settings.dataset.is_file():
-        return _back_to_models(error=f"{settings.dataset} is not on this machine.")
+        return _back_to_models(
+            error=(
+                f"There is no dataset to train on: {settings.dataset} is not on this "
+                "machine. Fetch it onto the server first."
+            )
+        )
 
     try:
         candidate = models.by_name(submitted.model_name)
@@ -156,15 +163,18 @@ def _try_promotion(service: ModelService, version: int, *, wanted: bool) -> tupl
     tower that logs only its successes cannot answer that question.
     """
     if not wanted:
-        return False, f"version {version} is registered but not promoted, as requested."
+        return False, (
+            f"Version {version} was trained and saved. It is not scoring anything yet — "
+            "use it from the table above when you are ready."
+        )
 
     try:
         service.known.promote(version)
     except registry.RegistryError as refusal:
-        return False, f"version {version} was registered and not promoted: {refusal}"
+        return False, (f"Version {version} was trained and saved, but not switched on: {refusal}")
 
     service.forget()
-    return True, f"version {version} was trained and promoted; it is now serving."
+    return True, f"Version {version} was trained and is now scoring your orders."
 
 
 @router.get("/costs")
@@ -200,8 +210,9 @@ def update_costs(
         costs=costs_in(session),
         defaults=decision.CostModel(),
         notice=(
-            "Saved. New predictions use these numbers; the ones already stored keep the "
-            "costs they were made under, because a report should say what the system said."
+            "Saved. Orders scored from now on use these numbers. Reports already produced "
+            "keep the ones they were made with, so a report always says what the system "
+            "actually said at the time."
         ),
     )
 

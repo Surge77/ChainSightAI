@@ -82,7 +82,7 @@ class Registry:
         for entry in self.versions():
             if entry.version == version:
                 return entry
-        raise RegistryError(f"no version {version} in {self.path}")
+        raise RegistryError(f"There is no version {version} in {self.path}.")
 
     def current(self) -> Version | None:
         """The promoted model, or `None` when nothing has been promoted yet.
@@ -140,15 +140,15 @@ class Registry:
         challenger, standing = candidate.score(metric), incumbent.score(metric)
         if challenger is None or standing is None:
             raise RegistryError(
-                f"version {candidate.version} cannot be compared with version "
-                f"{incumbent.version} on {metric!r}: one of them does not record it. "
-                "Score both on the same metric, or promote with force."
+                f"Version {candidate.version} cannot be compared with version "
+                f"{incumbent.version}, because one of them has no {metric!r} score. "
+                "Score both on the same measure, or use force to switch anyway."
             )
         if challenger < standing:
             raise RegistryError(
-                f"version {candidate.version} scores {challenger:.4f} on {metric!r} against "
-                f"version {incumbent.version}'s {standing:.4f}. Newer is not better. "
-                "Promote with force if this is deliberate."
+                f"Version {candidate.version} is worse than the one in use: {challenger:.4f} "
+                f"on {metric!r} against version {incumbent.version}'s {standing:.4f}. "
+                "Being newer does not make it better. Use force if you meant to do this."
             )
 
     def table(self) -> str:

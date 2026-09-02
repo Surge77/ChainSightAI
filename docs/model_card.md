@@ -22,7 +22,7 @@ python scripts/report_classifiers.py    # the threshold sweep and the reliabilit
 | **Features** | 16 fields known at order time, from 53 source columns |
 | **Trained on** | 125,200 orders placed in 2015–2016 |
 | **Evaluated on** | 24,369 orders placed from July 2017 onward, looked at once |
-| **Decision threshold** | 0.2966, derived from a cost model, not set at 0.5 |
+| **Decision threshold** | 0.4216, derived from a cost model, not set at 0.5 |
 | **Version** | `v1.0.0` |
 
 ## Intended use
@@ -191,10 +191,12 @@ The application must present this figure as an estimate with a stated basis, and
 The model's output is not the product. `docs/decision_engine.md` argues each assumption; in
 summary:
 
-- The flagging threshold is **0.2966**, derived from `intervention / (intervention + cost of
-  a late delivery)` rather than left at 0.5. A threshold of 0.5 silently assumes an
-  unnecessary intervention and a missed late delivery cost the same; here the miss costs a
-  little over twice as much.
+- The flagging threshold is **0.4216**, derived from
+  `intervention / (effectiveness x cost of a late delivery)` rather than left at 0.5. A
+  threshold of 0.5 silently assumes an unnecessary intervention and a missed late delivery
+  cost the same; here the miss costs more than twice as much. It is calibrated on an order
+  of typical value, and each order's report also carries the break-even for its own value —
+  a cheaper order needs more risk before acting pays.
 - Priority is **net benefit**, not probability. A 499.95 order at 85% risk outranks a 20.00
   order at 90%.
 - **Every cost in that model is an assumption with no empirical basis in this dataset.** The

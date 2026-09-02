@@ -1,84 +1,131 @@
 {% extends "base.html" %}
-{% block title %}Cost model — ChainSight{% endblock %}
+{% block title %}Costs — ChainSight{% endblock %}
 
 {% block content %}
-  <h1>Cost model</h1>
+  <h1>Costs</h1>
   <p class="lede">
-    None of these numbers is learned. The dataset records no intervention, no penalty and no
-    customer response, so every field below is a business assumption — somebody's stated
-    judgement, dated and attributed, rather than a constant that arrived from nowhere.
-    <a href="https://github.com/Surge77/ChainSightAI/blob/main/docs/decision_engine.md">
-      The document argues each one.</a>
+    Tell ChainSight what a late delivery costs you, and what it costs to prevent one. These
+    numbers decide which orders get flagged and how they are ranked — the model itself knows
+    nothing about money.
   </p>
 
+  <details class="why">
+    <summary>Where did these numbers come from?</summary>
+    <p>
+      From somebody's judgement, not from the data. The dataset records no intervention, no
+      penalty and no customer reaction, so there is nothing here to learn them from. They are
+      editable fields rather than constants buried in the code precisely so that disagreeing
+      with them is a conversation about your business instead of a code change.
+      <a href="https://github.com/Surge77/ChainSightAI/blob/main/docs/decision_engine.md">
+        Each one is argued here.</a>
+    </p>
+  </details>
+
   <div class="card">
-    <p class="figure-label">Threshold these costs imply</p>
-    <p class="figure">{{ "%.4f"|format(costs.threshold) }}</p>
+    <p class="figure-label">Orders get flagged above</p>
+    <p class="figure">{{ "%.1f%%"|format(costs.threshold * 100) }}</p>
     <p class="figure-note">
-      Not 0.5. A threshold of a half assumes an unnecessary intervention and a missed late
-      delivery cost the same; on these numbers the miss costs
-      {{ "%.1f"|format(costs.late_cost(costs.typical_order_value) / costs.intervention) }}
-      times as much. Changing any field below moves this number.
+      Not 50%. Half would assume that a needless intervention and a missed late delivery cost
+      you the same; on the numbers below, the damage stepping in actually prevents is
+      {{ "%.1f"|format(costs.intervention_effectiveness
+                       * costs.late_cost(costs.typical_order_value) / costs.intervention) }}
+      times what stepping in costs. Change any field below and this moves. It is calibrated
+      on an order of typical value, so a cheaper order needs more risk than this before
+      acting pays and a dearer one needs less; each order's report shows its own figure.
+      <span class="caption">Exactly: {{ "%.4f"|format(costs.threshold) }}.</span>
     </p>
   </div>
 
   <form class="stack wide card" method="post" action="/admin/costs">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
     <label>
-      Cost of intervening
+      What it costs to step in on one order
       <input type="number" name="intervention" step="0.01" min="0.01"
              value="{{ costs.intervention }}" required />
-      <span class="caption">Expedite, call the carrier, warn the customer. Default {{ defaults.intervention }}.</span>
-    </label>
-    <label>
-      Share of margin lost when late
-      <input type="number" name="margin_lost_when_late" step="0.01" min="0" max="1"
-             value="{{ costs.margin_lost_when_late }}" required />
-      <span class="caption">Default {{ defaults.margin_lost_when_late }}.</span>
-    </label>
-    <label>
-      Fixed penalty when late
-      <input type="number" name="fixed_penalty_when_late" step="0.01" min="0"
-             value="{{ costs.fixed_penalty_when_late }}" required />
       <span class="caption">
-        Goodwill and support, which does not scale with order size. Default
-        {{ defaults.fixed_penalty_when_late }} — and on a typical order in this catalogue it
-        is the larger half of the exposure.
+        Expediting it, calling the carrier, warning the customer. Default
+        {{ defaults.intervention }}.
       </span>
     </label>
     <label>
-      Mean margin ratio
+      Share of the damage stepping in prevents
+      <input type="number" name="intervention_effectiveness" step="0.01" min="0.01" max="1"
+             value="{{ costs.intervention_effectiveness }}" required />
+      <span class="caption">
+        Default {{ defaults.intervention_effectiveness }} — which says expediting always
+        works. That is optimistic, and it is what this engine assumed without saying so
+        until this field existed. Lower it to what your carrier data supports: it raises the
+        cut-off above and shrinks every saving, and below about 0.75 no order in this
+        catalogue can reach <span class="priority priority-critical">critical</span>, so the
+        bands at the bottom of this page need lowering with it.
+      </span>
+    </label>
+    <label>
+      Share of the profit you lose when an order is late
+      <input type="number" name="margin_lost_when_late" step="0.01" min="0" max="1"
+             value="{{ costs.margin_lost_when_late }}" required />
+      <span class="caption">
+        As a decimal, so {{ defaults.margin_lost_when_late }} means you lose that share of
+        the profit on that order. Default {{ defaults.margin_lost_when_late }}.
+      </span>
+    </label>
+    <label>
+      Flat cost of a late delivery, whatever the order is worth
+      <input type="number" name="fixed_penalty_when_late" step="0.01" min="0"
+             value="{{ costs.fixed_penalty_when_late }}" required />
+      <span class="caption">
+        Support time, goodwill, a discount to keep the customer. It does not scale with order
+        size, and on a typical order here it is the larger half of the damage. Default
+        {{ defaults.fixed_penalty_when_late }}.
+      </span>
+    </label>
+    <label>
+      Average profit margin
       <input type="number" name="mean_margin" step="0.0001" min="0" max="1"
              value="{{ costs.mean_margin }}" required />
       <span class="caption">
-        Measured on the training slice, not assumed: {{ defaults.mean_margin }}. Nothing can
-        predict the ratio itself, so expected profit is this times a known order total.
+        As a decimal, so {{ defaults.mean_margin }} means about
+        {{ "%.0f%%"|format(defaults.mean_margin * 100) }} of an order's total is profit. This
+        one is measured from the data rather than assumed.
       </span>
     </label>
     <label>
       Typical order value
       <input type="number" name="typical_order_value" step="0.01" min="0.01"
              value="{{ costs.typical_order_value }}" required />
-      <span class="caption">The order the threshold is calibrated against. Measured: {{ defaults.typical_order_value }}.</span>
+      <span class="caption">
+        The order the flagging cut-off is tuned around. Measured:
+        {{ defaults.typical_order_value }}.
+      </span>
     </label>
+
+    {# The three band fields were three bare numbers with one shared rule between them and no
+       statement of what they are bands *of*. #}
     <label>
-      Critical above
+      Call it "critical" above
       <input type="number" name="critical_above" step="0.01" value="{{ costs.critical_above }}" required />
+      <span class="caption">
+        These three are amounts of money worth acting on, not risk percentages.
+      </span>
     </label>
     <label>
-      High above
+      Call it "high" above
       <input type="number" name="high_above" step="0.01" value="{{ costs.high_above }}" required />
     </label>
     <label>
-      Monitor above
+      Call it "monitor" above
       <input type="number" name="monitor_above" step="0.01" value="{{ costs.monitor_above }}" required />
-      <span class="caption">The bands must descend: critical &gt; high &gt; monitor.</span>
+      <span class="caption">
+        Anything below this is "low". The three must go downwards: critical &gt; high &gt;
+        monitor.
+      </span>
     </label>
 
     <div class="actions">
       <button class="primary" type="submit">Save</button>
       <span class="caption">
-        Predictions already stored keep the costs they were made under.
+        Only affects orders scored from now on. Reports already produced keep the numbers they
+        were made with.
       </span>
     </div>
   </form>
