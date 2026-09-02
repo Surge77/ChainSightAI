@@ -22,14 +22,17 @@ from chainsight_web.config import ConfigurationError, Settings
 from chainsight_web.security import MIN_PASSWORD_LENGTH, hash_password, is_strong_enough
 from chainsight_web.tables import User
 
-_DESCRIPTION = "Create the first administrator, or run the ChainSight application."
+_DESCRIPTION = "Create the first administrator account, or start the ChainSight web app."
 
 
 def _read_password(supplied: str) -> str | None:
     """The supplied password, or a prompted one; None when it is too short to accept."""
     password = supplied or getpass.getpass("password: ")
     if not is_strong_enough(password):
-        print(f"a password needs at least {MIN_PASSWORD_LENGTH} characters", file=sys.stderr)
+        print(
+            f"That password is too short. It needs at least {MIN_PASSWORD_LENGTH} characters.",
+            file=sys.stderr,
+        )
         return None
     return password
 
@@ -56,8 +59,9 @@ def init(args: argparse.Namespace) -> int:
             existing.is_admin = admin
             session.commit()
             print(
-                f"{email} already existed; is_admin is now {existing.is_admin}. "
-                "Its password is unchanged — pass --reset-password to set a new one."
+                f"{email} already had an account. Administrator: {existing.is_admin}. "
+                "Its password was left alone — pass --reset-password if you meant to "
+                "change it."
             )
             return 0
 
@@ -76,15 +80,16 @@ def init(args: argparse.Namespace) -> int:
             existing.must_change_password = True
             session.commit()
             print(
-                f"{email} already existed; password reset and must be replaced at the next "
-                f"sign-in. is_admin is {existing.is_admin}."
+                f"{email} already had an account. Password reset — they will have to "
+                "choose their own when they next sign in. Administrator: "
+                f"{existing.is_admin}."
             )
             return 0
 
         session.add(User(email=email, password_hash=hash_password(password), is_admin=admin))
         session.commit()
 
-    print(f"created {email}{' as an administrator' if admin else ''}")
+    print(f"Created {email}{' as an administrator' if admin else ''}.")
     return 0
 
 
@@ -106,13 +111,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="chainsight_web", description=_DESCRIPTION)
     subcommands = parser.add_subparsers(dest="command", required=True)
 
-    created = subcommands.add_parser("init", help="create the first administrator")
+    created = subcommands.add_parser("init", help="create or update an account from the server")
     created.add_argument("--email", required=True)
-    created.add_argument("--password", default="", help="prompted for when omitted")
+    created.add_argument("--password", default="", help="leave it out and you will be asked for it")
     created.add_argument(
         "--reset-password",
         action="store_true",
-        help="replace the password on an account that already exists; leaves its role alone",
+        help="set a new password on an account that already exists, leaving its role alone",
     )
     # Defaulting to None rather than True is what lets `init` tell "no role was asked for" apart
     # from "administrator was asked for". Both create and promote treat the first as the second;
@@ -123,11 +128,11 @@ def build_parser() -> argparse.ArgumentParser:
         dest="admin",
         action="store_false",
         default=None,
-        help="create an ordinary operator instead of an administrator",
+        help="create an ordinary account instead of an administrator",
     )
     created.set_defaults(run=init)
 
-    served = subcommands.add_parser("serve", help="run the application")
+    served = subcommands.add_parser("serve", help="start the web app")
     served.add_argument("--host", default="")
     served.add_argument("--port", type=int, default=0)
     served.set_defaults(run=serve)

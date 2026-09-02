@@ -3,12 +3,21 @@
 {% block title %}Models — ChainSight{% endblock %}
 
 {% block content %}
-  <h1>Model registry</h1>
+  <h1>Models</h1>
   <p class="lede">
-    Registering a model does not promote it. Promotion compares the candidate against
-    whatever is serving on <strong>{{ metric }}</strong> and refuses a regression, because
-    retraining produces a newer model and newer is not better.
+    Train new models here, and choose which one scores your orders. Training one does not
+    switch it on — you do that separately, with <strong>Use this one</strong>.
   </p>
+
+  <details class="why">
+    <summary>Why won't it just use the newest model?</summary>
+    <p>
+      Because newer is not the same as better. Retraining always gives you a new model, and
+      sometimes a worse one. So before swapping, we compare the new model against the one
+      already in use on <strong>{{ metric }}</strong>, and refuse the swap if it has got
+      worse. <em>Force</em> overrides that, when you know something the comparison does not.
+    </p>
+  </details>
 
   <div class="card scroll">
     {% if versions %}
@@ -18,13 +27,13 @@
             <th>Version</th><th>Model</th><th>Trained</th>
             <th class="number">ROC AUC</th><th class="number">Avg precision</th>
             <th class="number">F1</th><th class="number">Accuracy</th>
-            <th>Promote</th>
+            <th>Use</th>
           </tr>
         </thead>
         <tbody>
           {% for version in versions %}
             <tr>
-              <td>{{ version.version }}{% if version.is_live %} <strong>· serving</strong>{% endif %}</td>
+              <td>{{ version.version }}{% if version.is_live %} <strong>· in use</strong>{% endif %}</td>
               <td>{{ version.model_name }}<br /><span class="caption">{{ version.note }}</span></td>
               <td><span class="caption">{{ version.trained_at }}</span></td>
               {{ ui.scores_cells(version.scores) }}
@@ -33,7 +42,7 @@
                   <form class="inline" method="post" action="/admin/models/promote">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
                     <input type="hidden" name="version" value="{{ version.version }}" />
-                    <button class="secondary" type="submit">Promote</button>
+                    <button class="secondary" type="submit">Use this one</button>
                   </form>
                   <form class="inline" method="post" action="/admin/models/promote">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
@@ -47,22 +56,30 @@
           {% endfor %}
         </tbody>
       </table>
+      {# Four bare metric names with nothing next to them. Somebody who knows what they are
+         does not need this; somebody who does not had no way to find out from here. #}
+      <details class="why">
+        <summary>What do these four scores mean?</summary>
+        <p>
+          All four run from 0 to 1, higher is better. <strong>ROC AUC</strong> and
+          <strong>Avg precision</strong> ask how well the model <em>sorts</em> orders —
+          whether the ones that end up late come out near the top. That is what matters here,
+          because you work down a list. <strong>F1</strong> and <strong>Accuracy</strong> ask
+          how often it labels a single order correctly, which depends on where you put the
+          cut-off. Models are chosen on {{ metric }}.
+        </p>
+      </details>
     {% else %}
-      <p>Nothing registered yet. Train one below.</p>
+      <p>No models yet. Train one below.</p>
     {% endif %}
   </div>
 
-  <h2>Retrain</h2>
+  <h2>Train a new model</h2>
   <div class="card">
-    <p>
-      Training reads the dataset file on this machine. Nothing entered through this
-      application reaches the training set, which is why an operator cannot poison it
-      through the order form.
-    </p>
     <form class="stack" method="post" action="/admin/models/retrain">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
       <label>
-        Candidate
+        Which model to try
         <select name="model_name">
           {% for name in candidates %}
             <option value="{{ name }}" {% if name == default_model %}selected{% endif %}>{{ name }}</option>
@@ -70,22 +87,35 @@
         </select>
       </label>
       <label>
-        Why this run is happening
+        Why you are running this
         <input type="text" name="note" maxlength="256" placeholder="monthly refresh" />
+        <span class="caption">
+          Free text, shown in the table above. Useful when you come back in six months and
+          wonder what version 4 was for.
+        </span>
       </label>
       <label>
         <span>
           <input type="checkbox" name="promote" value="true" />
-          Promote it if it beats what is serving
+          Switch to it automatically if it beats the model in use
         </span>
       </label>
       <div class="actions">
         <button class="primary" type="submit">Train</button>
         <span class="caption">
-          This runs to completion before the page returns. On the full table that is minutes.
+          Don't close the tab — the page waits until training finishes, which on the full
+          dataset takes a few minutes.
         </span>
       </div>
     </form>
+    <details class="why">
+      <summary>What does it train on?</summary>
+      <p>
+        The dataset file sitting on this server. Nothing anybody enters through the order form
+        ever reaches the training data, which is why an ordinary account cannot poison the
+        model by feeding it made-up orders.
+      </p>
+    </details>
   </div>
 
   <h2>Recent training runs</h2>
@@ -111,11 +141,11 @@
         </tbody>
       </table>
       <p class="caption">
-        Refused promotions are kept. The guard turning a retrain down is why the serving
-        model is the age it is, and a log of successes alone cannot answer that.
+        Runs that were refused are kept here too. If you are wondering why the model in use is
+        as old as it is, the answer is usually in this list.
       </p>
     {% else %}
-      <p>No retrains have been run from this application.</p>
+      <p>Nothing has been trained from this application yet.</p>
     {% endif %}
   </div>
 {% endblock %}

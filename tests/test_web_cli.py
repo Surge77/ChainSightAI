@@ -101,7 +101,7 @@ class TestInit:
 
         assert code == 0
         assert accounts(environment)[0].password_hash == before
-        assert "password is unchanged" in capsys.readouterr().out
+        assert "password was left alone" in capsys.readouterr().out
 
     def test_a_rerun_does_not_even_ask_for_a_password(
         self, environment: Path, monkeypatch: pytest.MonkeyPatch

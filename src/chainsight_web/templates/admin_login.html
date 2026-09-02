@@ -3,11 +3,11 @@
 
 {% block content %}
   <div class="auth auth-admin">
-    <p class="auth-badge">Control tower</p>
+    <p class="auth-badge">Administrators</p>
     <h1>Administrator sign in</h1>
     <p class="lede">
-      Retraining, promoting a model and editing the cost model happen here. An operator
-      account cannot reach these pages.
+      Training models, choosing which one is used, and setting the costs all happen behind
+      this door. An ordinary account cannot reach these pages.
     </p>
 
     <form class="stack card" method="post" action="/admin/login">
@@ -24,14 +24,18 @@
       </label>
       <div class="actions">
         <button class="primary" type="submit">Sign in</button>
-        <a href="/login">Operator sign in</a>
+        <a href="/login">Not an administrator?</a>
       </div>
     </form>
 
-    <p class="auth-aside">
-      This form does not grant the administrator role and never has. It checks the role that
-      is already on the account, which is set by <code>python -m chainsight_web init</code>
-      on the server.
-    </p>
+    <details class="why">
+      <summary>Signing in here doesn't make me an administrator, does it?</summary>
+      <p>
+        No. This form only checks whether your account already is one. The role itself is
+        granted elsewhere — by another administrator, or on the server with
+        <code>python -m chainsight_web init</code>. A sign-in page that could hand out its own
+        privileges would not be a sign-in page.
+      </p>
+    </details>
   </div>
 {% endblock %}

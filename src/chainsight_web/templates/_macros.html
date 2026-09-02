@@ -8,7 +8,7 @@
       <thead>
         <tr>
           <th>Group</th>
-          <th class="number">Mean predicted risk</th>
+          <th class="number">Average predicted risk</th>
           <th class="number">Orders</th>
         </tr>
       </thead>
@@ -26,8 +26,9 @@
     </table>
   </div>
   <p class="caption">
-    A group with fewer than {{ noisy_below }} orders is marked noisy. Its mean is a number,
-    not a measurement.
+    Groups with fewer than {{ noisy_below }} orders are marked <em>noisy</em>: there are too
+    few orders in them for the average to mean anything. Read those rows as a count, not as a
+    finding.
   </p>
 {% endmacro %}
 

@@ -4,17 +4,28 @@
 {% block content %}
   <h1>New order</h1>
   <p class="lede">
-    Sixteen fields, and every one of them is knowable at the moment an order is placed.
-    Nothing about the shipment appears here, because nothing about the shipment has
-    happened yet — that is the whole argument of this project, in the shape of a form.
+    Fill this in and we score the order straight away. Every field is something you already
+    know when the order is placed — nothing here asks about the shipment, because it has not
+    shipped yet.
   </p>
+
+  <details class="why">
+    <summary>Why doesn't it ask anything about the delivery?</summary>
+    <p>
+      Because that would be cheating. Facts like how long the shipment actually took only
+      exist once it has arrived, so a model trained on them scores beautifully in testing and
+      is useless in real life — by the time you could fill those boxes in, you already know
+      whether the order was late. These 16 fields are the ones that exist early enough to act
+      on.
+    </p>
+  </details>
 
   {% if not choices %}
     <div class="card">
       <p class="error">{{ blocked }}</p>
       <p class="caption">
-        The dropdown values come from the categories the live model was fitted on, so there
-        is no honest form to show until a model is promoted.
+        The options in these dropdowns come from whichever model is currently in use, so
+        there is no form to show you until an administrator turns one on.
       </p>
     </div>
   {% else %}
@@ -38,20 +49,26 @@
       <label>
         Product price
         <input type="number" name="product_price" min="0" step="0.01" value="199.99" required />
+        <span class="caption">List price for one item, before any discount.</span>
       </label>
       <label>
         Order total
         <input type="number" name="order_total" min="0" step="0.01" value="191.99" required />
-        <span class="caption">After discount. This is the number the decision engine uses.</span>
+        <span class="caption">
+          What the customer actually pays, after the discount. This is the figure we weigh
+          the risk against.
+        </span>
       </label>
       <label>
         Discount rate
         <input type="number" name="discount_rate" min="0" max="1" step="0.01" value="0.04"
                required />
+        <span class="caption">As a decimal, so 0.04 means 4% off.</span>
       </label>
       <label>
         Ordered at
         <input type="datetime-local" name="ordered_at" value="{{ default_ordered_at }}" required />
+        <span class="caption">When the customer placed the order.</span>
       </label>
 
       <div class="actions">

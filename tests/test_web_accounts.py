@@ -111,7 +111,7 @@ class TestGranting:
     ) -> None:
         response = client.post("/admin/users/role", data={"user_id": "9999", "make_admin": "true"})
 
-        assert "no+account+9999" in response.headers["location"]
+        assert "no+account+with+id+9999" in response.headers["location"]
 
 
 class TestRevoking:
@@ -169,7 +169,7 @@ class TestRevoking:
 
 class TestAuditView:
     def test_an_untouched_installation_says_so(self, client: TestClient, admin: User) -> None:
-        assert "No role has been granted or revoked" in client.get("/admin/users").text
+        assert "Nobody has been made or unmade an administrator" in client.get("/admin/users").text
 
     def test_a_change_appears_on_the_page(
         self, client: TestClient, admin: User, sessions: sessionmaker[Session]

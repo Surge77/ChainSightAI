@@ -3,9 +3,9 @@
 
 {% block content %}
   <div class="auth">
-    <h1>Register</h1>
+    <h1>Create an account</h1>
     <p class="lede">
-      This creates an operator account: its own orders, and their predictions.
+      You will be able to enter orders and see how likely each one is to arrive late.
     </p>
 
     <form class="stack card" method="post" action="/register">
@@ -20,9 +20,8 @@
         <input type="password" name="password" autocomplete="new-password" required
                minlength="{{ min_password_length }}" maxlength="72" />
         <span class="caption">
-          At least {{ min_password_length }} characters. There is no character-composition
-          rule: length is the part that costs an attacker time, and composition rules push
-          people towards shorter passwords they can remember.
+          At least {{ min_password_length }} characters. No capitals, digits or symbols
+          required.
         </span>
       </label>
       <div class="actions">
@@ -31,9 +30,24 @@
       </div>
     </form>
 
-    <p class="auth-aside">
-      The administrator role is not a field on this form and cannot be asked for. It is set
-      on the server with <code>python -m chainsight_web init</code>.
-    </p>
+    {# The reasoning behind both of these is worth keeping and was worth demoting: neither
+       answers a question somebody filling in this form is asking yet. #}
+    <details class="why">
+      <summary>Why are there no password rules?</summary>
+      <p>
+        Length is the part that costs an attacker time. Rules about capitals and symbols push
+        people towards shorter passwords they can remember, which is the wrong trade.
+      </p>
+    </details>
+
+    <details class="why">
+      <summary>How do I get an administrator account?</summary>
+      <p>
+        Not from this form — the administrator role is not a field on it and cannot be asked
+        for. Somebody with access to the server grants it, by running
+        <code>python -m chainsight_web init</code> there. An account you can promote yourself
+        into is not a role, it is a checkbox.
+      </p>
+    </details>
   </div>
 {% endblock %}

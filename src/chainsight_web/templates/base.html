@@ -39,9 +39,13 @@
             <a href="/orders">Orders</a>
             <a href="/orders/new">New order</a>
             {% if user.is_admin %}
-              <a href="/admin">Control tower</a>
+              {# "Dashboard" and "Costs" rather than "Control tower" and "Cost model". Both
+                 of those are this project's own vocabulary, and a navigation bar is the one
+                 place a reader meets a word with no sentence around it to explain it. The
+                 terms still exist -- they are defined on the pages themselves. #}
+              <a href="/admin">Dashboard</a>
               <a href="/admin/models">Models</a>
-              <a href="/admin/costs">Cost model</a>
+              <a href="/admin/costs">Costs</a>
               <a href="/admin/users">Accounts</a>
             {% endif %}
             <form class="inline" method="post" action="/logout">
@@ -90,8 +94,8 @@
 
     <div class="disclaimer">
       <p class="bar">
-        A production-shaped application on a historical benchmark dataset. It observes no real
-        shipments and predicts nothing that is actually in transit.
+        Demo. This is a real, working application, but it runs on a historical public dataset
+        — it is not connected to any live shipments.
       </p>
     </div>
 
@@ -102,8 +106,20 @@
     </main>
 
     <footer>
-      <span>Late-delivery risk is predicted from the sixteen fields known before dispatch.</span>
-      <span>The thirty-seven columns that only exist afterwards are dropped at ingest.</span>
+      <span>
+        We estimate the chance an order arrives late using only the 16 things you know
+        before it ships.
+      </span>
+      <span>
+        The 37 columns that only exist once it has shipped are thrown away, so the model
+        cannot cheat by reading the answer.
+      </span>
+      {# The glossary already existed and nothing on screen pointed at it, which made every
+         term on these pages a word you either knew or did not. #}
+      <span>
+        <a href="https://github.com/Surge77/ChainSightAI/blob/main/docs/glossary.md">
+          What the words on these pages mean</a>
+      </span>
     </footer>
     {% block scripts %}{% endblock %}
   </body>

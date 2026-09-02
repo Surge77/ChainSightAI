@@ -275,6 +275,32 @@ button.secondary { font: inherit; padding: 0.4rem 0.9rem; border: 1px solid var(
 .chart { max-width: 100%; }
 .caption { color: var(--muted); font-size: 0.85rem; margin-top: 0.5rem; }
 
+/* Every page here has an argument behind it, and the argument is most of what this project
+   is -- but a reader seeing the page for the first time needs the instruction before the
+   defence, and a lede that opens by justifying a design decision gives them the second
+   thing first. So the reasoning keeps its full length and moves behind the question a
+   reader would actually have asked, which is what a <summary> is for. Nothing is deleted;
+   it is reordered. Closed by default: somebody who already knows why never has to scroll
+   past it again. */
+.why { margin: 0 0 1.25rem; }
+.why > summary {
+  cursor: pointer;
+  color: var(--accent);
+  font-size: 0.85rem;
+  /* The marker sits outside the text so a wrapped second line aligns under the first word
+     rather than under the triangle. */
+  list-style-position: outside;
+}
+.why > summary:hover { text-decoration: underline; }
+.why > p {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin: 0.5rem 0 0;
+  max-width: var(--measure);
+}
+/* Inside a card the block is the last thing in it, and the card already supplies the gap. */
+.card .why { margin-bottom: 0; }
+
 footer {
   /* Two things were wrong here at once. The rule overhung its own text, because a border
      draws on the padding box while the words sit a gutter inside it -- so the element is
