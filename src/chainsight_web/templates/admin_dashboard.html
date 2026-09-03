@@ -32,7 +32,7 @@
     </div>
     <div class="card">
       <p class="figure-label">Money at risk</p>
-      <p class="figure">{{ "%.2f"|format(summary.value_at_risk) }}</p>
+      <p class="figure">{{ money(summary.value_at_risk) }}</p>
       <p class="figure-note">
         Everything late deliveries are expected to cost, across all orders, using each
         order's most recent score. The next card splits it.
@@ -40,13 +40,13 @@
     </div>
     <div class="card">
       <p class="figure-label">Recoverable</p>
-      <p class="figure">{{ "%.2f"|format(summary.net_benefit_available) }}</p>
+      <p class="figure">{{ money(summary.net_benefit_available) }}</p>
       <p class="figure-note">
         {{ "%.0f%%"|format(summary.recoverable_share * 100) }} of the money at risk, on the
         {{ summary.actionable }} of {{ summary.scored }} scored orders that repay the cost of
         stepping in. Acting on those costs
-        {{ "%.2f"|format(summary.cost_of_acting) }} and is already subtracted here; the
-        other {{ "%.2f"|format(summary.absorbed_exposure) }} sits on orders where acting
+        {{ money(summary.cost_of_acting) }} and is already subtracted here; the
+        other {{ money(summary.absorbed_exposure) }} sits on orders where acting
         would cost more than it saves, and is being carried rather than spent against.
       </p>
     </div>

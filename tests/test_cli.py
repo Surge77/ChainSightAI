@@ -19,6 +19,7 @@ import pytest
 
 from chainsight import cli, ingest, persistence, registry, training
 from chainsight.features import ORDER_FIELDS
+from chainsight.money import CURRENCY_VAR
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SAMPLE = REPO_ROOT / "data" / "sample_orders.csv"
@@ -247,6 +248,39 @@ class TestPredict:
         assert "chance of being late" in printed
         assert "net saving if we act" in printed
         assert trained.model_name in printed
+
+    def test_the_amounts_are_priced_and_the_probabilities_are_not(
+        self,
+        artefacts: Path,
+        trained: registry.Version,
+        order_file: Path,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Four amounts carry the symbol; the three percentages on the first line do not."""
+        registry.Registry(path=artefacts / registry.REGISTRY_NAME).promote(1)
+
+        assert cli.main(["predict", str(order_file), "--artefacts", str(artefacts)]) == 0
+
+        printed = capsys.readouterr().out
+        assert printed.count("$") == 4
+        assert "$%" not in printed
+
+    def test_the_configured_currency_reaches_the_command_line_too(
+        self,
+        artefacts: Path,
+        trained: registry.Version,
+        order_file: Path,
+        capsys: pytest.CaptureFixture[str],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setenv(CURRENCY_VAR, "GBP")
+        registry.Registry(path=artefacts / registry.REGISTRY_NAME).promote(1)
+
+        assert cli.main(["predict", str(order_file), "--artefacts", str(artefacts)]) == 0
+
+        printed = capsys.readouterr().out
+        assert "£" in printed
+        assert "$" not in printed
 
     def test_it_refuses_to_serve_when_nothing_has_been_promoted(
         self, artefacts: Path, trained: registry.Version, order_file: Path

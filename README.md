@@ -12,7 +12,7 @@ arrive late**, works out **how much money that would cost you**, and then tells 
 thing you actually want to know: **is this order worth doing something about?**
 
 That last step is the point. Being told an order is 90% likely to be late is not useful on
-its own — if the order is worth twenty rupees, chasing it costs more than losing it. So
+its own — if the order is worth twenty dollars, chasing it costs more than losing it. So
 orders are ranked by what acting on them is worth, not by how risky they are.
 
 It comes as a web app (sign in, enter orders, read the reports) and a command line.
@@ -194,10 +194,10 @@ HIGH  Worth stepping in. 55% chance of arriving late, and sorting it out costs l
 letting it happen.
 
   chance of being late  54.6%  (flagged above 42.2%; on an order this size acting pays above 27.9%)
-  order total           479.95
-  expected profit       57.40
-  money at risk         29.30
-  net saving if we act  14.30
+  order total           $479.95
+  expected profit       $57.40
+  money at risk         $29.30
+  net saving if we act  $14.30
 
   model: one-hot random forest
 ```
@@ -224,6 +224,14 @@ python -m chainsight_web serve                         # http://127.0.0.1:8000
 
 There is no default session secret and the process will not start without one. A default in
 a public repository is a forged-session vulnerability with the key published beside it.
+
+Money is shown in **dollars**, which is what this dataset is priced in: every customer in it
+is in the United States or Puerto Rico, and no product is ever sold at two prices — the same
+kayak is 59.99 into all 150 countries it reaches, so there is one set of books rather than a
+currency per destination. Set `CHAINSIGHT_CURRENCY` to label the pages in something else
+(`EUR`, `GBP`, `INR`, `CAD`, `AUD`); it changes the symbol, not the arithmetic, and the cost
+settings you enter are the half of the money that is genuinely yours.
+[ADR 0012](docs/adr/0012-name-the-currency.md) argues both halves.
 
 An **ordinary account** enters an order — the same sixteen at-order fields the model was
 trained on, with the dropdowns built from the categories it was actually fitted on — and gets

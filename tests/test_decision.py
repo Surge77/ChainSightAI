@@ -4,8 +4,8 @@ It produces a confidently wrong ranking instead, which nothing downstream would 
 this file tests the behaviour an operator would notice rather than the formulas.
 
 Every figure here comes from the dataset's real range. This is a retail table: orders run
-from a few rupees to 499.95 and the average carries about 21 of margin. An earlier draft of
-this project reasoned about interventions costing 200 against orders worth 50,000, which
+from a few dollars to $499.95 and the average carries about $21 of margin. An earlier draft
+of this project reasoned about interventions costing $200 against orders worth $50,000, which
 described a different business entirely.
 """
 

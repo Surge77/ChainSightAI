@@ -7,6 +7,15 @@ All notable changes to this project are recorded here. The format follows
 ## [Unreleased]
 
 ### Added
+- Money is labelled. Every amount on a page and in the CLI now carries a currency symbol,
+  defaulting to the dollar this dataset is priced in — every customer in it is in the United
+  States or Puerto Rico, and none of its 118 products is ever sold at two prices, so the
+  per-destination currency the 164 `Order Country` values suggest is not what the table
+  holds. `CHAINSIGHT_CURRENCY` relabels the pages for a deployment that bills in something
+  else, which matters because the cost model at `/admin/costs` is the operator's own money
+  rather than the dataset's. Only two-decimal currencies are accepted: an unsupported code
+  stops the process at startup rather than printing cents that the currency does not have.
+  [ADR 0012](docs/adr/0012-name-the-currency.md).
 - `intervention_effectiveness` on the cost model: the share of the damage stepping in is
   assumed to prevent, editable at `/admin/costs` and dated and attributed like every other
   cost. It defaults to 1.0, which is the assumption the decision engine was already making
@@ -16,8 +25,13 @@ All notable changes to this project are recorded here. The format follows
   quarters.
 - A per-order break-even probability, stored beside the threshold on every prediction and
   shown on the order's report. One global cut-off cannot be the break-even for a catalogue
-  running from a few rupees to 499.95, and this is the number the order's priority is
+  running from a few dollars to $499.95, and this is the number the order's priority is
   actually decided on.
+
+### Fixed
+- Nine sentences across the README, the decision engine, the order report and its tests
+  described this catalogue in **rupees**. It is a United States retail table. The figures
+  were never wrong; the unit attached to them in prose was.
 
 ### Changed
 - The dashboard's "worth acting on" card is now "Recoverable", and carries the share of

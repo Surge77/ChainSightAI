@@ -1,9 +1,14 @@
-"""Everything the application reads from its environment, and the one thing it refuses.
+"""Everything the application reads from its environment, and the two things it refuses.
 
 There is no default session secret. A portfolio repository that ships one has published a
 forged-session vulnerability along with the key to exploit it, and the failure mode of a
 fallback is that nobody ever notices the secret was never set. So `Settings.from_env` raises
 when `CHAINSIGHT_SESSION_SECRET` is absent, and the application does not start.
+
+The second refusal is a currency this application cannot write down. `CHAINSIGHT_CURRENCY`
+does have a default — the dollar the dataset is priced in — but a value outside
+`chainsight.money.SYMBOLS` stops the process here rather than printing a wrong figure on
+every page that shows a price. `chainsight/money.py` argues both halves of that.
 
 Everything else has a default, because everything else is either harmless to guess or
 already gitignored. The database is a file, the artefacts directory is the one the CLI
@@ -16,6 +21,8 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from pathlib import Path
+
+from chainsight.money import DEFAULT_CURRENCY, SYMBOLS, CurrencyError, resolve_currency
 
 #: Read at startup. Absent means the process exits rather than inventing one.
 SECRET_VAR = "CHAINSIGHT_SESSION_SECRET"
@@ -47,12 +54,21 @@ class Settings:
     session_hours: int = DEFAULT_SESSION_HOURS
     host: str = DEFAULT_HOST
     port: int = DEFAULT_PORT
+    #: What the money on screen is labelled with. The order totals are dollars whatever this
+    #: says — they come out of a fixed dataset — but the cost model is typed in by whoever
+    #: runs this, and it is their currency that belongs on those fields.
+    currency: str = DEFAULT_CURRENCY
 
     def __post_init__(self) -> None:
         if not self.session_secret.strip():
             raise ConfigurationError(
                 f"{SECRET_VAR} is empty. A blank secret signs every session with the same "
                 "known key, which is the same vulnerability as having no secret at all."
+            )
+        if self.currency not in SYMBOLS:
+            raise ConfigurationError(
+                f"{self.currency!r} is not a currency this application can write down. "
+                f"Supported: {', '.join(sorted(SYMBOLS))}."
             )
 
     @property
@@ -72,6 +88,14 @@ class Settings:
                 '`python -c "import secrets; print(secrets.token_urlsafe(32))"`.'
             )
 
+        # Normalised and checked here rather than in `__post_init__`, so that ` eur ` from a
+        # shell is accepted and a bad code arrives as the configuration error this module
+        # raises rather than the `ValueError` the money table raises.
+        try:
+            currency = resolve_currency(source)
+        except CurrencyError as refusal:
+            raise ConfigurationError(str(refusal)) from refusal
+
         return cls(
             session_secret=secret,
             database_url=source.get("CHAINSIGHT_DATABASE", cls.database_url),
@@ -80,4 +104,5 @@ class Settings:
             session_hours=int(source.get("CHAINSIGHT_SESSION_HOURS", DEFAULT_SESSION_HOURS)),
             host=source.get("CHAINSIGHT_HOST", DEFAULT_HOST),
             port=int(source.get("CHAINSIGHT_PORT", DEFAULT_PORT)),
+            currency=currency,
         )

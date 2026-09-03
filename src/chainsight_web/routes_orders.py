@@ -20,6 +20,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from chainsight.money import format_money
 from chainsight_web.dependencies import (
     CHANGE_PASSWORD_PATH,
     current_user,
@@ -30,7 +31,7 @@ from chainsight_web.dependencies import (
 from chainsight_web.schemas import OrderInput
 from chainsight_web.service import ModelService, ServiceError, categories_of, predict_for
 from chainsight_web.tables import ORDER_COLUMNS, Order, Prediction, User
-from chainsight_web.templating import render
+from chainsight_web.templating import currency_for, render
 
 router = APIRouter(tags=["orders"])
 
@@ -147,7 +148,7 @@ def create_order(
             user=user,
             order=order,
             prediction=None,
-            fields=_readable(order),
+            fields=_readable(order, currency_for(request)),
             error=str(absent),
             status_code=503,
         )
@@ -177,7 +178,7 @@ def order_report(
         user=user,
         order=order,
         prediction=_latest_prediction(session, order.id),
-        fields=_readable(order),
+        fields=_readable(order, currency_for(request)),
     )
 
 
@@ -209,12 +210,16 @@ def _latest_prediction(session: Session, order_id: int) -> Prediction | None:
     ).first()
 
 
-def _readable(order: Order) -> list[tuple[str, object]]:
-    """The order as label-and-value pairs, for the report's table."""
+def _readable(order: Order, currency: str) -> list[tuple[str, object]]:
+    """The order as label-and-value pairs, for the report's table.
+
+    The two amounts carry the currency and the discount rate does not, because it is a
+    share rather than a sum and a symbol on it would be a category error.
+    """
     pairs = [(LABELS[field], getattr(order, field)) for field in CHOICE_FIELDS]
     pairs.append(("Quantity", order.quantity))
-    pairs.append(("Product price", f"{order.product_price:.2f}"))
-    pairs.append(("Order total", f"{order.order_total:.2f}"))
+    pairs.append(("Product price", format_money(order.product_price, currency)))
+    pairs.append(("Order total", format_money(order.order_total, currency)))
     pairs.append(("Discount rate", f"{order.discount_rate:.2f}"))
     pairs.append(("Ordered at", order.ordered_at.strftime("%Y-%m-%d %H:%M")))
     return pairs

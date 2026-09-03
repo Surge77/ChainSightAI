@@ -25,16 +25,20 @@ Measured on the training slice, and worth stating before any of the rest:
 
 | | |
 |---|---|
-| mean `Order Item Total` | **176.88** |
-| median | 159.99 |
-| largest order in the table | **499.95** |
+| mean `Order Item Total` | **$176.88** |
+| median | $159.99 |
+| largest order in the table | **$499.95** |
 | mean margin ratio | 0.1196 |
-| mean expected profit per order | **21.15** |
+| mean expected profit per order | **$21.15** |
 
-This is retail. Orders are small and the spread is narrow.
+This is retail. Orders are small and the spread is narrow. The figures are dollars: every
+customer in this dataset is in the United States or Puerto Rico, and no product is sold at
+two prices, so there is one set of books rather than a currency per destination.
+[ADR 0012](adr/0012-name-the-currency.md) sets out the evidence and what `CHAINSIGHT_CURRENCY`
+does and does not change.
 
-An earlier draft of this project reasoned about interventions costing 200 against orders
-worth 50,000, and produced a threshold of 0.55 — *above* 0.5, implying it is barely ever
+An earlier draft of this project reasoned about interventions costing $200 against orders
+worth $50,000, and produced a threshold of 0.55 — *above* 0.5, implying it is barely ever
 worth acting. That was not a modelling error; it was arithmetic applied to invented figures
 for a business that does not exist in this data. Measuring first is what caught it, and the
 constants now carry the measurement in their comments.
@@ -94,7 +98,7 @@ correctly and then printed a different formula underneath it, which is how it su
 ### One threshold, many prices
 
 `p*` is calibrated on `typical_order_value`, and one number cannot be the break-even for a
-catalogue running from a few rupees to 499.95. A cheaper order has less to lose and needs
+catalogue running from a few dollars to $499.95. A cheaper order has less to lose and needs
 *more* risk before the same intervention repays itself; a dearer one needs less. So a flag
 is a **risk label**, and the instruction is the priority, which uses `Decision.break_even` —
 the same sum done with that order's own value. Each order's report shows both, rather than
@@ -103,8 +107,8 @@ leaving an operator to reconcile them.
 ## Ranking is by net benefit, not by probability
 
 ```
-value at risk  =  P(late)  ×  (expected profit × 0.5  +  25.00)
-net benefit    =  effectiveness × value at risk  −  15.00
+value at risk  =  P(late)  ×  (expected profit × 0.5  +  $25.00)
+net benefit    =  effectiveness × value at risk  −  $15.00
 ```
 
 The threshold produces a label an operator reads at a glance. The **ranking** ignores it
