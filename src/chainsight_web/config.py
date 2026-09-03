@@ -12,8 +12,13 @@ every page that shows a price. `chainsight/money.py` argues both halves of that.
 
 Everything else has a default, because everything else is either harmless to guess or
 already gitignored. The database is a file, the artefacts directory is the one the CLI
-writes to, and the bind address is localhost — this app has no TLS and no rate limiting, and
-`README.md` says plainly that it is not built to face the internet.
+writes to, and the bind address is localhost — this app has no TLS of its own, and
+`README.md` says plainly what a deployment has to put in front of it.
+
+One of those defaults is load-bearing rather than harmless. `CHAINSIGHT_FORWARDED_ALLOW_IPS`
+decides which address a request appears to come from, and the rate limiter in `throttle.py`
+counts per address, so getting it wrong disables the limiter or locks out everybody. It is
+argued at length beside its constant.
 """
 
 from __future__ import annotations
@@ -35,6 +40,26 @@ DEFAULT_SESSION_HOURS = 12
 #: `SECURITY.md` lists as deliberately absent.
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8000
+
+#: Whose `X-Forwarded-For` uvicorn is allowed to believe. The default trusts a proxy running
+#: on this machine and nobody else, which is the only safe thing to assume without knowing
+#: the deployment.
+#:
+#: This one setting can be wrong in two directions and both are worth naming, because the
+#: rate limiter in `throttle.py` counts per source address and this is what decides what a
+#: source address *is*.
+#:
+#: Too permissive — `*` when there is no proxy in front, or one that does not overwrite the
+#: header — and a client sets `X-Forwarded-For` themselves, arrives as a new address on every
+#: request, and never spends a budget. The limiter is then decorative.
+#:
+#: Too strict — the default, behind a proxy — and every visitor arrives wearing the proxy's
+#: address. They share one budget, and the tenth wrong password anybody types locks out the
+#: whole deployment. That failure is at least loud.
+#:
+#: So `*` is correct exactly when nothing can reach the application except a proxy that sets
+#: the header itself, which is true inside a container whose only ingress is the platform's.
+DEFAULT_FORWARDED_ALLOW_IPS = "127.0.0.1"
 
 
 class ConfigurationError(RuntimeError):
@@ -58,6 +83,8 @@ class Settings:
     #: says — they come out of a fixed dataset — but the cost model is typed in by whoever
     #: runs this, and it is their currency that belongs on those fields.
     currency: str = DEFAULT_CURRENCY
+    #: See `DEFAULT_FORWARDED_ALLOW_IPS`. Decides what the rate limiter counts as one client.
+    forwarded_allow_ips: str = DEFAULT_FORWARDED_ALLOW_IPS
 
     def __post_init__(self) -> None:
         if not self.session_secret.strip():
@@ -105,4 +132,7 @@ class Settings:
             host=source.get("CHAINSIGHT_HOST", DEFAULT_HOST),
             port=int(source.get("CHAINSIGHT_PORT", DEFAULT_PORT)),
             currency=currency,
+            forwarded_allow_ips=source.get(
+                "CHAINSIGHT_FORWARDED_ALLOW_IPS", DEFAULT_FORWARDED_ALLOW_IPS
+            ),
         )

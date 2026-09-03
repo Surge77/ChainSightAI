@@ -94,7 +94,13 @@ def init(args: argparse.Namespace) -> int:
 
 
 def serve(args: argparse.Namespace) -> int:
-    """Run uvicorn against the configured host and port."""
+    """Run uvicorn against the configured host and port.
+
+    `proxy_headers` is on, and `forwarded_allow_ips` decides whose forwarding header is
+    believed. That pair is what makes `request.client.host` the visitor's address rather
+    than the proxy's, which is what the rate limiter counts. The default trusts only a proxy
+    on this machine; `config.py` argues both ways of getting it wrong.
+    """
     import uvicorn
 
     settings = Settings.from_env()
@@ -102,6 +108,8 @@ def serve(args: argparse.Namespace) -> int:
         create_app(settings),
         host=args.host or settings.host,
         port=args.port or settings.port,
+        proxy_headers=True,
+        forwarded_allow_ips=settings.forwarded_allow_ips,
         log_level="info",
     )
     return 0

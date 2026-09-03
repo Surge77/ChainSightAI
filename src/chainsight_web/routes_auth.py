@@ -8,6 +8,12 @@ The account created by registration is always an operator. There is no field for
 no first-user-becomes-admin shortcut, and no branch that could grant one — an admin is made
 by `python -m chainsight_web init` or by an existing admin, both of which happen server-side
 with no browser involved.
+
+Every route below is a POST a stranger can reach, so each one spends from a budget held
+against the address it came from. `throttle.py` argues the design; the part that matters
+here is that the refusal says the same thing to everybody and names no account, exactly as
+`REJECTED` does, and that a wrong password at the administrator's door spends from the same
+budget as a wrong password at the operator's.
 """
 
 from __future__ import annotations
@@ -19,6 +25,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from chainsight_web import throttle
 from chainsight_web.config import Settings
 from chainsight_web.dependencies import current_user, get_session, get_settings
 from chainsight_web.schemas import Credentials, Registration
@@ -60,8 +67,20 @@ def sign_in(
     session: Annotated[Session, Depends(get_session)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> Response:
+    client = throttle.client_address(request)
+    remaining = throttle.retry_after(session, throttle.SIGN_IN, client)
+    if remaining is not None:
+        return render(
+            request,
+            "login.html",
+            user=None,
+            error=throttle.wait_message(remaining),
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+        )
+
     account = _authenticate(session, credentials)
     if account is None:
+        throttle.record(session, throttle.SIGN_IN, client)
         return render(request, "login.html", user=None, error=REJECTED, status_code=400)
 
     return _signed_in(account, settings)
@@ -105,8 +124,22 @@ def admin_sign_in(
     elimination, which accounts are. No cookie is set on that path either, so a refused
     operator leaves with exactly what they arrived with.
     """
+    client = throttle.client_address(request)
+    remaining = throttle.retry_after(session, throttle.SIGN_IN, client)
+    if remaining is not None:
+        return render(
+            request,
+            "admin_login.html",
+            user=None,
+            error=throttle.wait_message(remaining),
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+        )
+
     account = _authenticate(session, credentials)
     if account is None or not account.is_admin:
+        # A valid operator refused here spends an attempt too. Otherwise the one credential
+        # this page is guaranteed to reject would be the one that buys unlimited guesses.
+        throttle.record(session, throttle.SIGN_IN, client)
         return render(request, "admin_login.html", user=None, error=REJECTED, status_code=400)
 
     return _signed_in(account, settings, landing=AFTER_ADMIN_LOGIN)
@@ -144,6 +177,24 @@ def register(
     session: Annotated[Session, Depends(get_session)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> Response:
+    client = throttle.client_address(request)
+    remaining = throttle.retry_after(session, throttle.REGISTRATION, client)
+    if remaining is not None:
+        return render(
+            request,
+            "register.html",
+            user=None,
+            min_password_length=MIN_PASSWORD_LENGTH,
+            error=throttle.wait_message(remaining),
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+        )
+
+    # Spent whatever happens next, unlike the sign-in budget. The abuse this budget exists
+    # for is a table filled with accounts, so a *successful* registration is the thing worth
+    # counting; and posting repeatedly at addresses that turn out to be taken is how you
+    # find out which addresses are taken, so that path counts too.
+    throttle.record(session, throttle.REGISTRATION, client)
+
     taken = session.scalars(select(User).where(User.email == registration.email)).first()
     if taken is not None:
         return render(

@@ -33,6 +33,22 @@ All notable changes to this project are recorded here. The format follows
   rather than the dataset's. Only two-decimal currencies are accepted: an unsupported code
   stops the process at startup rather than printing cents that the currency does not have.
   [ADR 0012](docs/adr/0012-name-the-currency.md).
+- Rate limiting on every POST a stranger can reach. Ten sign-in attempts per source address
+  per fifteen minutes, shared between `/login` and `/admin/login`; five registrations per
+  address per hour. The window slides, so there is no lockout period to serve — an address
+  recovers as its oldest attempt ages out. This closes the first item in `SECURITY.md`'s
+  "what is not defended against", which had said that an attacker with a candidate list was
+  limited only by bcrypt's own cost.
+
+  Counted per address rather than per account, deliberately. Per-account lockout hands
+  anybody a way to lock anybody else out of an application with no recovery flow, and it
+  catches strictly less: one source guessing many passwords at one account and one source
+  guessing one password at many accounts are the same bucket when the bucket is the source.
+  `docs/adr/0013-count-attempts-per-address.md` argues it, and records what stays open.
+- `CHAINSIGHT_FORWARDED_ALLOW_IPS`, passed to uvicorn along with `proxy_headers`. It decides
+  which address a request appears to come from, and therefore what the rate limiter counts.
+  It defaults to trusting a proxy on this machine and nobody else; both ways of getting it
+  wrong are named beside the constant in `config.py`.
 - `intervention_effectiveness` on the cost model: the share of the damage stepping in is
   assumed to prevent, editable at `/admin/costs` and dated and attributed like every other
   cost. It defaults to 1.0, which is the assumption the decision engine was already making
