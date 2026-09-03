@@ -6,6 +6,17 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-09-03
+
+**The release that makes this deployable in public.** Three things stood between a working
+application on localhost and a URL anybody can open: a login form that would check as many
+passwords as anybody cared to post, a wheel with no pages in it, and a database that lived on
+a filesystem rebuilt every restart. All three are closed, and `deploy/hf/` is the container
+that follows from them.
+
+611 tests. `src/` at 100% line and branch coverage, on Python 3.11 and 3.12, and the web
+suite runs a second time against a real Postgres.
+
 ### Added
 - `deploy/hf/` — a Dockerfile, an entrypoint and a runbook for hosting this as a Hugging Face
   Docker Space. The image installs a named tag rather than copying a working tree, and trains
