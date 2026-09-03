@@ -8,6 +8,10 @@
 *.csv   text eol=lf
 *.html  text eol=lf
 *.css   text eol=lf
+# A shell script with CRLF endings does not run in a Linux container. It fails with
+# `: not found`, which names neither the file nor the reason.
+*.sh    text eol=lf
+Dockerfile text eol=lf
 
 *.png   binary
 *.jpg   binary

@@ -10,11 +10,21 @@ SQLite-only.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 import pytest
+from sqlalchemy import text
 
-from chainsight_web.database import POOL_RECYCLE_SECONDS, build_engine, engine_options
+from chainsight_web.config import ConfigurationError
+from chainsight_web.database import (
+    POOL_RECYCLE_SECONDS,
+    Base,
+    build_engine,
+    create_tables,
+    engine_options,
+    verify_schema,
+)
 
 SQLITE = "sqlite:///a-file.db"
 POSTGRES = "postgresql+psycopg://user:secret@example.invalid/chainsight"
@@ -60,3 +70,39 @@ class TestEngineOptions:
         build_engine(SQLITE)
 
         assert handed == {**engine_options(SQLITE), "url": SQLITE}
+
+
+class TestTheSchemaCheck:
+    """`create_all` adds tables and cannot add columns, so an old database needs saying so.
+
+    The runbook in `deploy/hf/` tells whoever is reading a container log to act on this
+    message by name, which is a poor reason to have never run it.
+    """
+
+    def test_a_database_built_by_this_code_starts(self, tmp_path: Path) -> None:
+        engine = build_engine(f"sqlite:///{tmp_path / 'current.db'}")
+        create_tables(engine)
+
+        verify_schema(engine)
+
+    def test_a_table_that_is_simply_absent_is_not_a_missing_column(self, tmp_path: Path) -> None:
+        """`create_all` runs first and will make it. Only an existing table can lack a field.
+
+        Treating an absent table as a schema error would refuse to start against exactly the
+        empty database this application is designed to build for itself.
+        """
+        engine = build_engine(f"sqlite:///{tmp_path / 'partial.db'}")
+        Base.metadata.tables["users"].create(engine)
+
+        verify_schema(engine)
+
+    def test_a_database_that_predates_a_column_is_refused_and_the_column_named(
+        self, tmp_path: Path
+    ) -> None:
+        """Otherwise it works until the first request that touches the field, then 500s."""
+        engine = build_engine(f"sqlite:///{tmp_path / 'old.db'}")
+        with engine.begin() as connection:
+            connection.execute(text("CREATE TABLE users (id INTEGER PRIMARY KEY, email VARCHAR)"))
+
+        with pytest.raises(ConfigurationError, match="password_hash"):
+            verify_schema(engine)

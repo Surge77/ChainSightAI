@@ -7,6 +7,18 @@ All notable changes to this project are recorded here. The format follows
 ## [Unreleased]
 
 ### Added
+- `deploy/hf/` — a Dockerfile, an entrypoint and a runbook for hosting this as a Hugging Face
+  Docker Space. The image installs a named tag rather than copying a working tree, and trains
+  the 500-row sample during the build rather than shipping a `.joblib`, because a repository
+  that refuses to commit a pickled model should not smuggle one into an image. The first
+  administrator is made by the entrypoint, since `chainsight_web init` normally wants a shell
+  and a Space has none; running it on every start is a no-op after the first.
+- `tests/test_deploy_hf.py`, which checks the deployment files against the application they
+  deploy: the port in the Space header matches the one the container binds, the ref is a tag
+  and not a branch, the entrypoint has Unix line endings, and every `CHAINSIGHT_*` the
+  Dockerfile exports is a name `src/` actually reads. That last one already earned its place
+  — it caught the Dockerfile setting a rate-limiting variable that the branch it was built on
+  did not yet have, which would have deployed a public sign-up form with the limiter inert.
 - Postgres, through `CHAINSIGHT_DATABASE`. SQLite stays the default; this is for a
   deployment whose filesystem is rebuilt on every restart, where a database file means every
   account registered yesterday is gone today — and where the attempts table the rate limiter
