@@ -7,6 +7,35 @@ All notable changes to this project are recorded here. The format follows
 ## [Unreleased]
 
 ### Added
+- `deploy/hf/` — a Dockerfile, an entrypoint and a runbook for hosting this as a Hugging Face
+  Docker Space. The image installs a named tag rather than copying a working tree, and trains
+  the 500-row sample during the build rather than shipping a `.joblib`, because a repository
+  that refuses to commit a pickled model should not smuggle one into an image. The first
+  administrator is made by the entrypoint, since `chainsight_web init` normally wants a shell
+  and a Space has none; running it on every start is a no-op after the first.
+- `tests/test_deploy_hf.py`, which checks the deployment files against the application they
+  deploy: the port in the Space header matches the one the container binds, the ref is a tag
+  and not a branch, the entrypoint has Unix line endings, and every `CHAINSIGHT_*` the
+  Dockerfile exports is a name `src/` actually reads. That last one already earned its place
+  — it caught the Dockerfile setting a rate-limiting variable that the branch it was built on
+  did not yet have, which would have deployed a public sign-up form with the limiter inert.
+- Postgres, through `CHAINSIGHT_DATABASE`. SQLite stays the default; this is for a
+  deployment whose filesystem is rebuilt on every restart, where a database file means every
+  account registered yesterday is gone today — and where the attempts table the rate limiter
+  counts in would reset on anything that restarted the process, making "cause a restart" the
+  cheapest way past the limit. `psycopg[binary]` is its own `postgres` extra, because nothing
+  in the application imports it and somebody running against a file should not have to
+  acquire a database driver.
+  [ADR 0014](docs/adr/0014-postgres-when-the-filesystem-does-not-persist.md).
+- A second CI job running the web suite against a real `postgres:17`. The dialect a
+  deployment serves on should not be the one dialect nothing tests: SQLite returns a naive
+  datetime from a timezone-aware column and Postgres returns an aware one, and mixing them is
+  a `TypeError` rather than a wrong answer.
+- `pool_pre_ping` and a five-minute `pool_recycle` on every engine. A serverless Postgres
+  suspends an idle branch and drops its connections without telling the pool, so the first
+  request after an idle period gets a closed socket and dies with `OperationalError: server
+  closed the connection unexpectedly`, then works on a retry — a failure that reads as
+  flakiness rather than as configuration.
 - Money is labelled. Every amount on a page and in the CLI now carries a currency symbol,
   defaulting to the dollar this dataset is priced in — every customer in it is in the United
   States or Puerto Rico, and none of its 118 products is ever sold at two prices, so the
@@ -16,6 +45,22 @@ All notable changes to this project are recorded here. The format follows
   rather than the dataset's. Only two-decimal currencies are accepted: an unsupported code
   stops the process at startup rather than printing cents that the currency does not have.
   [ADR 0012](docs/adr/0012-name-the-currency.md).
+- Rate limiting on every POST a stranger can reach. Ten sign-in attempts per source address
+  per fifteen minutes, shared between `/login` and `/admin/login`; five registrations per
+  address per hour. The window slides, so there is no lockout period to serve — an address
+  recovers as its oldest attempt ages out. This closes the first item in `SECURITY.md`'s
+  "what is not defended against", which had said that an attacker with a candidate list was
+  limited only by bcrypt's own cost.
+
+  Counted per address rather than per account, deliberately. Per-account lockout hands
+  anybody a way to lock anybody else out of an application with no recovery flow, and it
+  catches strictly less: one source guessing many passwords at one account and one source
+  guessing one password at many accounts are the same bucket when the bucket is the source.
+  `docs/adr/0013-count-attempts-per-address.md` argues it, and records what stays open.
+- `CHAINSIGHT_FORWARDED_ALLOW_IPS`, passed to uvicorn along with `proxy_headers`. It decides
+  which address a request appears to come from, and therefore what the rate limiter counts.
+  It defaults to trusting a proxy on this machine and nobody else; both ways of getting it
+  wrong are named beside the constant in `config.py`.
 - `intervention_effectiveness` on the cost model: the share of the damage stepping in is
   assumed to prevent, editable at `/admin/costs` and dated and attributed like every other
   cost. It defaults to 1.0, which is the assumption the decision engine was already making
@@ -29,6 +74,13 @@ All notable changes to this project are recorded here. The format follows
   actually decided on.
 
 ### Fixed
+- A built wheel contained no templates and no stylesheet. `[tool.setuptools.package-data]`
+  declared `py.typed` and nothing else, so `pip install chainsight[web]` installed a web
+  application with no pages in it and `create_app` died on the `StaticFiles` mount. Every
+  install anyone has ever done was editable — which points at the source tree and therefore
+  hides this completely — so the bug was only ever going to appear the first time somebody
+  packaged the thing properly. `tests/test_packaging.py` now checks the declared patterns
+  against what is actually on disk, which costs a file walk rather than a build.
 - Nine sentences across the README, the decision engine, the order report and its tests
   described this catalogue in **rupees**. It is a United States retail table. The figures
   were never wrong; the unit attached to them in prose was.

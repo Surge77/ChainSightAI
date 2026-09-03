@@ -138,7 +138,8 @@ carries 0.9. A single `if` on shipping mode scores 0.6953 accuracy, so that, and
 ## Status
 
 **`v1.1.0`.** Every phase below is a branch and a tag, and every one landed behind a green CI
-run on Python 3.11 and 3.12. 516 tests; `src/` at 100% line and branch coverage.
+run on Python 3.11 and 3.12. 611 tests; `src/` at 100% line and branch coverage, and the
+web suite runs a second time against a real Postgres.
 
 | Phase | State |
 |---|---|
@@ -225,6 +226,38 @@ python -m chainsight_web serve                         # http://127.0.0.1:8000
 There is no default session secret and the process will not start without one. A default in
 a public repository is a forged-session vulnerability with the key published beside it.
 
+Data goes in a **file** by default — `chainsight.db`, next to wherever you started it. Point
+`CHAINSIGHT_DATABASE` at a Postgres URL where that file would not survive, which is any
+container platform that rebuilds its filesystem on restart. Install the driver with the
+`postgres` extra, and **name it in the URL**: a managed Postgres hands you `postgresql://…`,
+and pasted as-is SQLAlchemy looks for psycopg2 and startup dies with
+`ModuleNotFoundError: No module named 'psycopg2'`.
+
+```bash
+pip install -e ".[web,postgres]"
+export CHAINSIGHT_DATABASE="postgresql+psycopg://user:password@host/chainsight?sslmode=require"
+```
+
+[ADR 0014](docs/adr/0014-postgres-when-the-filesystem-does-not-persist.md) records why, and
+what a deployment on a shared database still does not get.
+
+### Running it as a Hugging Face Space
+
+[`deploy/hf/`](deploy/hf/) holds a Dockerfile, an entrypoint and the Space's own README, plus
+the runbook. Three things about it are decisions rather than boilerplate:
+
+- **The image installs a tag, and trains at build.** No working tree is copied and no
+  `.joblib` is shipped. `SECURITY.md` says loading an artefact somebody sent you is
+  equivalent to running a script they sent you, and an image is not a loophole in that — the
+  500-row sample is fitted during the build instead, in seconds.
+- **The data lives in Postgres.** A Space's filesystem is rebuilt on every restart, which
+  would take every registered account with it and reset the table the rate limiter counts in,
+  making "cause a restart" the cheapest way past the limit.
+- **`CHAINSIGHT_FORWARDED_ALLOW_IPS=*`, which is right there and nowhere else.** The only
+  route into that container is the platform's ingress. Set it that way with anything else
+  reachable and the rate limiter is decorative; leave it at the default behind a proxy and
+  every visitor shares one budget.
+
 Money is shown in **dollars**, which is what this dataset is priced in: every customer in it
 is in the United States or Puerto Rico, and no product is ever sold at two prices — the same
 kayak is 59.99 into all 150 countries it reaches, so there is one set of books rather than a
@@ -270,7 +303,7 @@ It does not observe real shipments, it has no live carrier feed, and it predicts
 that is actually in transit. The application simulates the workflow a real control tower
 would have. That distinction is stated here so it never has to be walked back.
 
-It also binds to localhost, has no TLS and no rate limiting. See [SECURITY.md](SECURITY.md)
+It also binds to localhost and has no TLS of its own. See [SECURITY.md](SECURITY.md)
 for what is defended and what deliberately is not.
 
 ## Documentation

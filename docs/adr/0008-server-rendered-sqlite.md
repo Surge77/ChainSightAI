@@ -1,6 +1,6 @@
 # 0008 — Server-rendered pages over SQLite, not an SPA
 
-**Status:** accepted
+**Status:** accepted; the storage half is superseded by [0014](0014-postgres-when-the-filesystem-does-not-persist.md)
 
 ## Context
 

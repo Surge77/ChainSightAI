@@ -21,3 +21,5 @@ somebody does.
 | [0010](0010-csrf-tokens.md) | CSRF tokens, checked globally rather than per route | accepted |
 | [0011](0011-one-set-of-books.md) | Keep the threshold and the ranking on one set of books | accepted, corrects 0006 |
 | [0012](0012-name-the-currency.md) | Name the currency, once, for the whole deployment | accepted |
+| [0013](0013-count-attempts-per-address.md) | Count attempts per address, not per account | accepted, closes an item in SECURITY.md |
+| [0014](0014-postgres-when-the-filesystem-does-not-persist.md) | Postgres when the filesystem does not persist | accepted, supersedes the storage half of 0008 |

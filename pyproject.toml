@@ -52,6 +52,11 @@ web = [
     "bcrypt==5.0.0",
     "itsdangerous==2.2.0",
 ]
+# Postgres is its own extra for the same reason the web app is: nothing in `chainsight_web`
+# imports psycopg, SQLAlchemy loads the driver from the URL, and somebody running this against
+# a file should not have to build or download a database driver to do it. A deployment that
+# needs its data to outlive the container installs `[web,postgres]`.
+postgres = ["psycopg[binary]==3.3.5"]
 dev = [
     "ruff==0.16.4",
     "pyright==1.1.411",
@@ -74,6 +79,11 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 chainsight = ["py.typed"]
+# The web package is templates and a stylesheet as much as it is Python. Without this line
+# they are simply absent from a built wheel, and `create_app` dies on the `StaticFiles`
+# mount — a failure invisible to every editable install, which is to say invisible to
+# everybody who has ever run this from a clone. `tests/test_packaging.py` holds the line.
+chainsight_web = ["templates/*.html", "static/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

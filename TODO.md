@@ -117,7 +117,13 @@ Named in `SECURITY.md` as deliberately absent.
 - [x] ~~CSRF tokens on every form post.~~ Done, and checked by a dependency registered on
       the application rather than route by route, so a form added later is covered without
       anybody remembering. See `docs/adr/0010-csrf-tokens.md`.
-- [ ] Login rate limiting and account lockout. Nothing currently counts failed attempts.
+- [x] ~~Login rate limiting and account lockout.~~ Rate limiting is done, per source address
+      and not per account — the lockout half of that line was rejected rather than skipped,
+      because locking an account after N wrong passwords lets anybody lock anybody else out
+      of an application with no recovery flow. See `docs/adr/0013-count-attempts-per-address.md`.
+- [ ] A distributed brute force, spread across many source addresses, is still not slowed
+      down. That is the part per-account counting would catch, and it needs an answer to the
+      denial-of-service problem above before it can be built.
 - [ ] Record model promotions made from the registry page. Retrains, cost-model edits and
       role changes all carry an author and a timestamp; a model promotion made on its own
       does not.
