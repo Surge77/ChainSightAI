@@ -35,7 +35,7 @@
       </div>
       <div class="card">
         <p class="figure-label">Expected profit</p>
-        <p class="figure">{{ "%.2f"|format(prediction.expected_profit) }}</p>
+        <p class="figure">{{ money(prediction.expected_profit) }}</p>
         <p class="figure-note">
           What this order should earn if all goes well: the average margin we measured,
           applied to this order's total. An estimate, not a prediction.
@@ -43,7 +43,7 @@
       </div>
       <div class="card">
         <p class="figure-label">Money at risk</p>
-        <p class="figure">{{ "%.2f"|format(prediction.value_at_risk) }}</p>
+        <p class="figure">{{ money(prediction.value_at_risk) }}</p>
         <p class="figure-note">
           What arriving late is expected to cost you here — the cost of a late delivery on
           this order, scaled by how likely it is.
@@ -51,7 +51,7 @@
       </div>
       <div class="card">
         <p class="figure-label">Net saving if we act</p>
-        <p class="figure">{{ "%.2f"|format(prediction.net_benefit) }}</p>
+        <p class="figure">{{ money(prediction.net_benefit) }}</p>
         <p class="figure-note">
           What stepping in is expected to save here, after paying for it. Your orders are
           ranked on this figure; below zero it means the intervention costs more than the
@@ -63,11 +63,12 @@
     <details class="why">
       <summary>Why isn't the riskiest order simply the most urgent one?</summary>
       <p>
-        Because ranking on risk alone treats one rupee of profit and sixty as the same
+        Because ranking on risk alone treats one dollar of profit and sixty as the same
         problem. Ranking on what is worth acting on does not. On this particular dataset the
-        effect is real but limited: every order is worth somewhere between a few rupees and
-        499.95, so the fixed goodwill cost of a late delivery is the larger half of the damage
-        on a typical order — which also means a typical order here can never reach
+        effect is real but limited: every order the model was trained on falls between a few
+        dollars and $499.95 — that catalogue is priced in dollars whatever you enter your own
+        orders in — so the fixed goodwill cost of a late delivery is the larger half of the
+        damage on a typical order, which also means a typical order here can never reach
         <span class="priority priority-critical">critical</span>, however risky it is. That is
         a fact about the data rather than a bug, and it is said out loud here rather than
         quietly designed around.

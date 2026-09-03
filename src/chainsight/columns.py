@@ -62,7 +62,7 @@ COLUMNS: tuple[Column, ...] = (
     Column("order date (DateOrders)", AT_ORDER, USE, "The moment the order is placed. Used for the time-aware split and for derived calendar features, never as a raw number."),
     Column("Order Id", AT_ORDER, IDENT, "65,752 orders. An identifier."),
     Column("Order Item Cardprod Id", AT_ORDER, DUPE, "Identical to Product Card Id on all 180,519 rows."),
-    Column("Order Item Discount", AT_ORDER, DUPE, "Sales minus Order Item Total to within a hundredth of a currency unit. The rate carries the same information scale-free."),
+    Column("Order Item Discount", AT_ORDER, DUPE, "Sales minus Order Item Total to within a cent. The rate carries the same information scale-free."),
     Column("Order Item Discount Rate", AT_ORDER, USE, "18 discrete rates from 0.00 to 0.25."),
     Column("Order Item Id", AT_ORDER, IDENT, "One value per row. A row number wearing a business name."),
     Column("Order Item Product Price", AT_ORDER, DUPE, "Identical to Product Price on all 180,519 rows."),

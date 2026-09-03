@@ -1,6 +1,6 @@
 """Turn a probability and a known order value into one ranked action.
 
-A probability is not a decision. An order at 90% risk carrying a rupee of margin and one at
+A probability is not a decision. An order at 90% risk carrying a dollar of margin and one at
 85% risk carrying sixty are the same number to a classifier and different problems to the
 person who has to act, and a control tower that flags both as HIGH has not helped anybody.
 
@@ -30,15 +30,17 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
+from chainsight import money
+
 #: The mean margin ratio on the training slice. Multiplying it by a known order total is
 #: the whole of the profit estimate, because `docs/results.md` establishes that nothing can
 #: predict the ratio itself.
 TRAINING_MEAN_MARGIN = 0.1196
 
 #: The mean `Order Item Total` on the training slice. This is a retail table: orders run
-#: from a few rupees to 499.95, and the average order carries about 21 of margin. Every
+#: from a few dollars to $499.95, and the average order carries about $21 of margin. Every
 #: default below is scaled to that, and the numbers in an earlier draft of this project --
-#: interventions costing 200 against orders worth 50,000 -- described a different business
+#: interventions costing $200 against orders worth $50,000 -- described a different business
 #: entirely. Measuring first is what caught it.
 TRAINING_MEAN_ORDER_VALUE = 176.88
 
@@ -64,7 +66,7 @@ class CostModel:
     """
 
     #: What it costs to act on one order: expedite it, call the carrier, warn the customer.
-    #: Small, because the average order it would be spent on is worth 176.88.
+    #: Small, because the average order it would be spent on is worth $176.88.
     intervention: float = 15.0
 
     #: The share of the damage an intervention is assumed to prevent. 1.0 says expediting
@@ -94,7 +96,7 @@ class CostModel:
     typical_order_value: float = TRAINING_MEAN_ORDER_VALUE
 
     #: Net benefit above which an order is CRITICAL, then HIGH, then MONITOR. The largest
-    #: order in the table exposes about 55, so a band above that would never be reached.
+    #: order in the table exposes about $55, so a band above that would never be reached.
     critical_above: float = 25.0
     high_above: float = 10.0
     monitor_above: float = 0.0
@@ -200,11 +202,11 @@ def decide(probability: float, order_total: float, costs: CostModel | None = Non
     `value_at_risk` is what the lateness is expected to cost; `net_benefit` subtracts what
     acting would cost. Ranking on net benefit rather than on probability is the entire
     reason this module exists: on the default costs it puts an 85%-risk order at the top of
-    the catalogue's price range above a 90%-risk order worth twenty, because the first
-    exposes 46.66 and the second 23.55.
+    the catalogue's price range above a 90%-risk order worth $20, because the first
+    exposes $46.66 and the second $23.55.
 
     The gap is narrower than it would be in a business with a wider price range. Every order
-    in this table falls between a few rupees and 499.95, so the fixed goodwill penalty is
+    in this table falls between a few dollars and $499.95, so the fixed goodwill penalty is
     the larger half of the exposure on a typical order, and value ranking can only do so
     much. That is a property of the data; it belongs in the model card rather than being
     hidden by inventing a bigger spread.
@@ -244,8 +246,16 @@ def _priority(net_benefit: float, costs: CostModel) -> Priority:
 
 
 def _recommendation(priority: Priority, probability: float, costs: CostModel) -> str:
-    """One sentence an operator can act on, naming the reason rather than the number."""
+    """One sentence an operator can act on, naming the reason rather than the number.
+
+    The one amount that does appear -- what an intervention costs -- is written in the
+    configured currency. The currency is read here rather than carried on `CostModel`
+    because it is a property of the deployment showing the sentence, not of the costs the
+    admin entered, and threading it through `decide` would put a display concern in the
+    signature of the arithmetic.
+    """
     risk = f"{probability:.0%}"
+    currency = money.resolve_currency()
     if priority is Priority.CRITICAL:
         return (
             f"Act on this now. {risk} chance of arriving late, on an order big enough that "
@@ -259,7 +269,7 @@ def _recommendation(priority: Priority, probability: float, costs: CostModel) ->
     if priority is Priority.MONITOR:
         return (
             f"Keep an eye on it. {risk} chance of arriving late, but you would barely cover "
-            f"the {costs.intervention:.0f} it costs to step in."
+            f"the {money.format_money(costs.intervention, currency)} it costs to step in."
         )
     return (
         f"Leave this one. At a {risk} chance of arriving late, stepping in would cost more "

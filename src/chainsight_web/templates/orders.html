@@ -31,7 +31,7 @@
             <th>Order</th>
             <th>Shipping mode</th>
             <th>Destination</th>
-            <th class="number">Total</th>
+            <th class="number">Total ({{ currency_symbol }})</th>
             <th class="number">Chance of being late</th>
             <th class="number">Net saving if we act</th>
             <th>Priority</th>
@@ -44,12 +44,12 @@
                 <span class="caption">{{ order.product_name }}</span></td>
               <td>{{ order.shipping_mode }}</td>
               <td>{{ order.order_country }}</td>
-              <td class="number">{{ "%.2f"|format(order.order_total) }}</td>
+              <td class="number">{{ money(order.order_total) }}</td>
               <td class="number">
                 {% if prediction %}{{ "%.1f%%"|format(prediction.probability * 100) }}{% else %}—{% endif %}
               </td>
               <td class="number">
-                {% if prediction %}{{ "%.2f"|format(prediction.net_benefit) }}{% else %}—{% endif %}
+                {% if prediction %}{{ money(prediction.net_benefit) }}{% else %}—{% endif %}
               </td>
               <td>
                 {% if prediction %}

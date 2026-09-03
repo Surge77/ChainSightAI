@@ -39,12 +39,12 @@
   <form class="stack wide card" method="post" action="/admin/costs">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
     <label>
-      What it costs to step in on one order
+      What it costs to step in on one order ({{ currency_symbol }})
       <input type="number" name="intervention" step="0.01" min="0.01"
              value="{{ costs.intervention }}" required />
       <span class="caption">
         Expediting it, calling the carrier, warning the customer. Default
-        {{ defaults.intervention }}.
+        {{ money(defaults.intervention) }}.
       </span>
     </label>
     <label>
@@ -70,13 +70,13 @@
       </span>
     </label>
     <label>
-      Flat cost of a late delivery, whatever the order is worth
+      Flat cost of a late delivery, whatever the order is worth ({{ currency_symbol }})
       <input type="number" name="fixed_penalty_when_late" step="0.01" min="0"
              value="{{ costs.fixed_penalty_when_late }}" required />
       <span class="caption">
         Support time, goodwill, a discount to keep the customer. It does not scale with order
         size, and on a typical order here it is the larger half of the damage. Default
-        {{ defaults.fixed_penalty_when_late }}.
+        {{ money(defaults.fixed_penalty_when_late) }}.
       </span>
     </label>
     <label>
@@ -90,30 +90,31 @@
       </span>
     </label>
     <label>
-      Typical order value
+      Typical order value ({{ currency_symbol }})
       <input type="number" name="typical_order_value" step="0.01" min="0.01"
              value="{{ costs.typical_order_value }}" required />
       <span class="caption">
         The order the flagging cut-off is tuned around. Measured:
-        {{ defaults.typical_order_value }}.
+        {{ money(defaults.typical_order_value) }}.
       </span>
     </label>
 
     {# The three band fields were three bare numbers with one shared rule between them and no
        statement of what they are bands *of*. #}
     <label>
-      Call it "critical" above
+      Call it "critical" above ({{ currency_symbol }})
       <input type="number" name="critical_above" step="0.01" value="{{ costs.critical_above }}" required />
       <span class="caption">
-        These three are amounts of money worth acting on, not risk percentages.
+        These three are amounts of money worth acting on, not risk percentages. They are
+        read in {{ currency }}, the same currency the two costs above are entered in.
       </span>
     </label>
     <label>
-      Call it "high" above
+      Call it "high" above ({{ currency_symbol }})
       <input type="number" name="high_above" step="0.01" value="{{ costs.high_above }}" required />
     </label>
     <label>
-      Call it "monitor" above
+      Call it "monitor" above ({{ currency_symbol }})
       <input type="number" name="monitor_above" step="0.01" value="{{ costs.monitor_above }}" required />
       <span class="caption">
         Anything below this is "low". The three must go downwards: critical &gt; high &gt;

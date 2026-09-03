@@ -28,9 +28,20 @@ import argparse
 import json
 import sys
 from collections.abc import Callable
+from functools import partial
 from pathlib import Path
 
-from chainsight import compare, decision, ingest, leakage, models, persistence, registry, training
+from chainsight import (
+    compare,
+    decision,
+    ingest,
+    leakage,
+    models,
+    money,
+    persistence,
+    registry,
+    training,
+)
 from chainsight.features import ORDER_FIELDS, single_order
 
 _DESCRIPTION = (
@@ -180,7 +191,13 @@ def predict(args: argparse.Namespace) -> int:
 
 
 def _render(verdict: decision.Decision, model_name: str) -> str:
-    """The decision as an operator reads it: the action first, the arithmetic under it."""
+    """The decision as an operator reads it: the action first, the arithmetic under it.
+
+    The currency is read here rather than at import, so setting `CHAINSIGHT_CURRENCY` takes
+    effect for the process that is running rather than for the one that imported first.
+    """
+    currency = money.resolve_currency()
+    amount = partial(money.format_money, currency=currency)
     return "\n".join(
         [
             f"{verdict.priority.value.upper()}  {verdict.recommendation}",
@@ -188,10 +205,10 @@ def _render(verdict: decision.Decision, model_name: str) -> str:
             f"  chance of being late  {verdict.probability:.1%}"
             f"  (flagged above {verdict.threshold:.1%}; on an order this"
             f" size acting pays above {verdict.break_even:.1%})",
-            f"  order total           {verdict.order_total:,.2f}",
-            f"  expected profit       {verdict.expected_profit:,.2f}",
-            f"  money at risk         {verdict.value_at_risk:,.2f}",
-            f"  net saving if we act  {verdict.net_benefit:,.2f}",
+            f"  order total           {amount(verdict.order_total)}",
+            f"  expected profit       {amount(verdict.expected_profit)}",
+            f"  money at risk         {amount(verdict.value_at_risk)}",
+            f"  net saving if we act  {amount(verdict.net_benefit)}",
             "",
             f"  model: {model_name}",
         ]

@@ -241,7 +241,7 @@ one thing the split exists to stop it doing.
 | 28 | `order date (DateOrders)` | at order | use | The moment the order is placed. Used for the time-aware split and for derived calendar features, never as a raw number. |
 | 29 | `Order Id` | at order | drop: identifier | 65,752 orders. An identifier. |
 | 30 | `Order Item Cardprod Id` | at order | drop: duplicate | Identical to Product Card Id on all 180,519 rows. |
-| 31 | `Order Item Discount` | at order | drop: duplicate | Sales minus Order Item Total to within a hundredth of a currency unit. The rate carries the same information scale-free. |
+| 31 | `Order Item Discount` | at order | drop: duplicate | Sales minus Order Item Total to within a cent. The rate carries the same information scale-free. |
 | 32 | `Order Item Discount Rate` | at order | use | 18 discrete rates from 0.00 to 0.25. |
 | 33 | `Order Item Id` | at order | drop: identifier | One value per row. A row number wearing a business name. |
 | 34 | `Order Item Product Price` | at order | drop: duplicate | Identical to Product Price on all 180,519 rows. |

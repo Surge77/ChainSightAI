@@ -20,3 +20,4 @@ somebody does.
 | [0009](0009-no-default-session-secret.md) | No default session secret | accepted, amended for role management |
 | [0010](0010-csrf-tokens.md) | CSRF tokens, checked globally rather than per route | accepted |
 | [0011](0011-one-set-of-books.md) | Keep the threshold and the ranking on one set of books | accepted, corrects 0006 |
+| [0012](0012-name-the-currency.md) | Name the currency, once, for the whole deployment | accepted |

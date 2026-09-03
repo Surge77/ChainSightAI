@@ -13,6 +13,7 @@ from pathlib import Path
 import pytest
 from itsdangerous import URLSafeTimedSerializer
 
+from chainsight.money import CURRENCY_VAR
 from chainsight_web.config import SECRET_VAR, ConfigurationError, Settings
 from chainsight_web.schemas import CostInput, OrderInput
 from chainsight_web.security import (
@@ -137,6 +138,28 @@ class TestSettings:
     def test_it_binds_localhost_unless_told_otherwise(self) -> None:
         """There is no TLS and no rate limiting here, and README.md says so."""
         assert Settings(session_secret=SECRET).host == "127.0.0.1"
+
+
+class TestCurrency:
+    """The dataset is priced in dollars, and the operator's cost model may not be."""
+
+    def test_the_default_is_the_dollar_the_dataset_is_priced_in(self) -> None:
+        assert Settings.from_env({SECRET_VAR: SECRET}).currency == "USD"
+
+    def test_the_environment_can_choose_another(self) -> None:
+        settings = Settings.from_env({SECRET_VAR: SECRET, CURRENCY_VAR: "gbp"})
+
+        assert settings.currency == "GBP"
+
+    def test_a_currency_this_app_cannot_write_stops_the_process(self) -> None:
+        # Not a page that renders a wrong figure. `JPY 1,234.56` shows cents the yen has
+        # no notion of, so the refusal happens once, here, rather than on every price.
+        with pytest.raises(ConfigurationError, match="JPY"):
+            Settings.from_env({SECRET_VAR: SECRET, CURRENCY_VAR: "JPY"})
+
+    def test_an_unknown_code_is_refused_by_direct_construction_too(self) -> None:
+        with pytest.raises(ConfigurationError, match="Supported"):
+            Settings(session_secret=SECRET, currency="ZZZ")
 
 
 class TestValidation:
