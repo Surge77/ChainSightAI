@@ -74,6 +74,11 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 chainsight = ["py.typed"]
+# The web package is templates and a stylesheet as much as it is Python. Without this line
+# they are simply absent from a built wheel, and `create_app` dies on the `StaticFiles`
+# mount — a failure invisible to every editable install, which is to say invisible to
+# everybody who has ever run this from a clone. `tests/test_packaging.py` holds the line.
+chainsight_web = ["templates/*.html", "static/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

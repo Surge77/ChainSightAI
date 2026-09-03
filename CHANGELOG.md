@@ -29,6 +29,13 @@ All notable changes to this project are recorded here. The format follows
   actually decided on.
 
 ### Fixed
+- A built wheel contained no templates and no stylesheet. `[tool.setuptools.package-data]`
+  declared `py.typed` and nothing else, so `pip install chainsight[web]` installed a web
+  application with no pages in it and `create_app` died on the `StaticFiles` mount. Every
+  install anyone has ever done was editable — which points at the source tree and therefore
+  hides this completely — so the bug was only ever going to appear the first time somebody
+  packaged the thing properly. `tests/test_packaging.py` now checks the declared patterns
+  against what is actually on disk, which costs a file walk rather than a build.
 - Nine sentences across the README, the decision engine, the order report and its tests
   described this catalogue in **rupees**. It is a United States retail table. The figures
   were never wrong; the unit attached to them in prose was.
