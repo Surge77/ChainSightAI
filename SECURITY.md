@@ -90,16 +90,33 @@ Accordingly:
 - SQLAlchemy is used with bound parameters throughout. There is no string-built SQL.
 - CORS is not enabled. The UI is server-rendered from the same origin, so there is no
   cross-origin case to permit.
-- The app binds `127.0.0.1` by default. It has no TLS termination, no rate limiting, and
-  no account-recovery flow; it is not built to face the public internet, and the README
-  says so.
+- Unauthenticated POSTs are rate limited per source address. Signing in allows ten attempts
+  in fifteen minutes, shared between `/login` and `/admin/login` so the separate
+  administrator page is not a way round the limit; registering allows five in an hour. A
+  successful sign-in does not refund the allowance, because reset-on-success lets an
+  attacker who holds one working account clear the counter at will. The refusal names no
+  account, for the same reason the rejection message does not.
+  See [`docs/adr/0013-count-attempts-per-address.md`](docs/adr/0013-count-attempts-per-address.md).
+- The app binds `127.0.0.1` by default. It has no TLS termination of its own and no
+  account-recovery flow, so a deployment has to put TLS in front of it.
 
 ### What is not defended against
 
 Stated plainly so nobody assumes otherwise.
 
-**No brute-force lockout on login.** Nothing counts failed attempts or delays a repeat, so
-an attacker with a candidate list is limited only by bcrypt's own cost.
+**No defence against a distributed brute force.** Attempts are counted per source address,
+so one attacker spreading the same candidate list across many addresses is not slowed down at
+all. Counting per account would catch that, and would hand anybody a way to lock anybody else
+out of an application with no account-recovery flow. The trade is argued in
+[`docs/adr/0013-count-attempts-per-address.md`](docs/adr/0013-count-attempts-per-address.md);
+what is here is the single-source case, which is the one the previous version of this section
+said was undefended.
+
+**The rate limit is only as good as `CHAINSIGHT_FORWARDED_ALLOW_IPS`.** It decides which
+address a request appears to come from. Set too permissively for the deployment, a client
+forges `X-Forwarded-For` and gets a fresh allowance per request; set too strictly behind a
+proxy, every visitor shares the proxy's address and the tenth wrong password locks out
+everybody. The default trusts only a proxy on the same machine.
 
 **No audit log of model promotions.** Retraining is recorded in `training_runs` with the
 administrator who triggered it and whether the guard allowed the promotion; cost-model edits

@@ -1,4 +1,4 @@
-"""Six tables, and one rule about where truth lives.
+"""Eight tables, and one rule about where truth lives.
 
 `model_versions` and `training_runs` look like they duplicate `artifacts/registry.json`, and
 they would if the application wrote to both. It does not. The JSON registry is the source of
@@ -246,4 +246,31 @@ class RoleChange(Base):
     subject_email: Mapped[str] = mapped_column(String(320))
     #: True when the role was granted, False when it was taken away.
     granted: Mapped[bool] = mapped_column(Boolean)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class Attempt(Base):
+    """One unauthenticated POST, counted against the address it came from.
+
+    Deliberately not a foreign key to `users`. The row is written before anybody knows
+    whether the address named a real account, and it is written identically when it did not
+    — a table that could only record attempts against accounts that exist would be a table
+    you could query to find out which addresses have accounts.
+
+    Nothing here records what was tried. No email, no password, no user agent. The counter
+    needs a source and an instant, and a login table that also stored the address somebody
+    typed would be a list of guessed email addresses sitting next to a list of real ones.
+
+    Rows are pruned by `throttle.record` as they age out of the window rather than by a
+    scheduled job, because this application has nowhere to run one.
+    """
+
+    __tablename__ = "attempts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    #: Which budget this attempt was spent from — see `throttle.Budget`.
+    scope: Mapped[str] = mapped_column(String(32), index=True)
+    #: The source address, as `throttle.client_address` resolved it. Long enough for an
+    #: IPv6 address with a scope suffix.
+    client: Mapped[str] = mapped_column(String(64), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)

@@ -270,7 +270,7 @@ It does not observe real shipments, it has no live carrier feed, and it predicts
 that is actually in transit. The application simulates the workflow a real control tower
 would have. That distinction is stated here so it never has to be walked back.
 
-It also binds to localhost, has no TLS and no rate limiting. See [SECURITY.md](SECURITY.md)
+It also binds to localhost and has no TLS of its own. See [SECURITY.md](SECURITY.md)
 for what is defended and what deliberately is not.
 
 ## Documentation
