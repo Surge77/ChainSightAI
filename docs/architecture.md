@@ -160,8 +160,10 @@ An operator posts an order:
 
 ## What is deliberately not here
 
-- **No Docker, no Postgres.** SQLite is sufficient for a single-node portfolio deployment and
-  the schema uses nothing SQLite-only, so the swap stays possible.
+- **No ORM-level migration tool, and no Postgres by default.** SQLite is sufficient for a
+  single-node deployment and stays the default. The schema uses nothing SQLite-only, so
+  `CHAINSIGHT_DATABASE` takes a Postgres URL where the filesystem does not persist —
+  [ADR 0014](adr/0014-postgres-when-the-filesystem-does-not-persist.md).
 - **No migration tool.** One deployment, and a schema change means a new database file. That
   is stated rather than discovered.
 - **No background jobs.** A retrain runs to completion inside the request, in FastAPI's

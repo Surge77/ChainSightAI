@@ -70,3 +70,48 @@ jobs:
           name: coverage
           path: coverage.xml
           if-no-files-found: ignore
+
+  # The application's data lives in Postgres in any deployment whose filesystem does not
+  # survive a restart, and until this job existed the dialect it served on was the one
+  # dialect nothing tested. SQLite hands back naive datetimes from a timezone-aware column
+  # and Postgres hands back aware ones; that difference is a `TypeError` rather than a wrong
+  # answer, and it would have surfaced in a container rather than here.
+  postgres:
+    name: web suite on postgres
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: chainsight
+          POSTGRES_PASSWORD: not-a-real-password
+          POSTGRES_DB: chainsight
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[web,postgres,dev]"
+
+      # Only the web tests. Everything under `chainsight` is pandas and scikit-learn and
+      # never touches a database, so running it twice would buy nothing but minutes.
+      - name: Web suite against Postgres
+        env:
+          CHAINSIGHT_TEST_DATABASE: postgresql+psycopg://chainsight:not-a-real-password@localhost:5432/chainsight
+        run: pytest -q tests/test_web_*.py

@@ -7,6 +7,23 @@ All notable changes to this project are recorded here. The format follows
 ## [Unreleased]
 
 ### Added
+- Postgres, through `CHAINSIGHT_DATABASE`. SQLite stays the default; this is for a
+  deployment whose filesystem is rebuilt on every restart, where a database file means every
+  account registered yesterday is gone today — and where the attempts table the rate limiter
+  counts in would reset on anything that restarted the process, making "cause a restart" the
+  cheapest way past the limit. `psycopg[binary]` is its own `postgres` extra, because nothing
+  in the application imports it and somebody running against a file should not have to
+  acquire a database driver.
+  [ADR 0014](docs/adr/0014-postgres-when-the-filesystem-does-not-persist.md).
+- A second CI job running the web suite against a real `postgres:17`. The dialect a
+  deployment serves on should not be the one dialect nothing tests: SQLite returns a naive
+  datetime from a timezone-aware column and Postgres returns an aware one, and mixing them is
+  a `TypeError` rather than a wrong answer.
+- `pool_pre_ping` and a five-minute `pool_recycle` on every engine. A serverless Postgres
+  suspends an idle branch and drops its connections without telling the pool, so the first
+  request after an idle period gets a closed socket and dies with `OperationalError: server
+  closed the connection unexpectedly`, then works on a retry — a failure that reads as
+  flakiness rather than as configuration.
 - Money is labelled. Every amount on a page and in the CLI now carries a currency symbol,
   defaulting to the dollar this dataset is priced in — every customer in it is in the United
   States or Puerto Rico, and none of its 118 products is ever sold at two prices, so the

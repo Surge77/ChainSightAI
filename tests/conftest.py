@@ -12,6 +12,7 @@ test, because fitting is the expensive part and a copy is not.
 
 from __future__ import annotations
 
+import os
 import shutil
 from collections.abc import Iterator
 from pathlib import Path
@@ -27,6 +28,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from chainsight import persistence, registry, training
 from chainsight_web.app import create_app
 from chainsight_web.config import Settings
+from chainsight_web.database import Base, build_engine
 from chainsight_web.security import CSRF_COOKIE, CSRF_FIELD, hash_password
 from chainsight_web.tables import User
 
@@ -35,6 +37,13 @@ SAMPLE = REPO_ROOT / "data" / "sample_orders.csv"
 
 #: Long enough to be a real secret, fixed so a signed cookie is reproducible across a test.
 TEST_SECRET = "a-test-secret-that-is-not-used-anywhere-real"
+
+#: Point this at a Postgres URL and the whole web suite runs against it instead of a file.
+#: CI does exactly that, because the dialect a deployment serves on should not be the one
+#: dialect nothing tests — SQLite and Postgres disagree about timezone-aware timestamps,
+#: about what an unqualified string comparison does, and about how a failed transaction
+#: leaves the session, and none of those show up on the way to the deployment.
+TEST_DATABASE_VAR = "CHAINSIGHT_TEST_DATABASE"
 
 OPERATOR = ("operator@example.com", "an operator password")
 ADMIN = ("admin@example.com", "an admin password")
@@ -69,10 +78,29 @@ def empty_artefacts(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def settings(tmp_path: Path, artefacts: Path) -> Settings:
+def database_url(tmp_path: Path) -> str:
+    """A private SQLite file, or the shared database CI pointed us at.
+
+    One shared database and many tests is a contamination problem, so the shared case drops
+    every table before each test and lets `create_app` build them again. That is slower than
+    a fresh file and it is the only way to run the same assertions against the dialect a
+    deployment actually uses.
+    """
+    external = os.environ.get(TEST_DATABASE_VAR)
+    if external is None:
+        return f"sqlite:///{tmp_path / 'chainsight.db'}"
+
+    engine = build_engine(external)
+    Base.metadata.drop_all(engine)
+    engine.dispose()
+    return external
+
+
+@pytest.fixture
+def settings(database_url: str, artefacts: Path) -> Settings:
     return Settings(
         session_secret=TEST_SECRET,
-        database_url=f"sqlite:///{tmp_path / 'chainsight.db'}",
+        database_url=database_url,
         artefacts=artefacts,
         dataset=SAMPLE,
     )

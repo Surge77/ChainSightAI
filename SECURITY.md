@@ -116,7 +116,10 @@ nothing that fits a model.
 
 ## Secrets
 
-There are none in this repository, and there is nothing here that needs one beyond the
-session secret and an optional Kaggle credential, both read from the environment. CI runs
-with no secrets configured. If you find a credential in the history, report it as a
-vulnerability — do not open an issue.
+There are none in this repository. Three things need one, and all three are read from the
+environment: the session secret, an optional Kaggle credential, and — for a deployment that
+stores its data in Postgres rather than a file — the `CHAINSIGHT_DATABASE` URL, which carries
+its password inside the string and is therefore a secret rather than a configuration value
+wherever a platform tells the two apart. CI runs with no secrets configured; its Postgres job
+uses a throwaway password for a database that exists for the length of one job. If you find a
+credential in the history, report it as a vulnerability — do not open an issue.

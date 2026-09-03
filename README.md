@@ -225,6 +225,21 @@ python -m chainsight_web serve                         # http://127.0.0.1:8000
 There is no default session secret and the process will not start without one. A default in
 a public repository is a forged-session vulnerability with the key published beside it.
 
+Data goes in a **file** by default — `chainsight.db`, next to wherever you started it. Point
+`CHAINSIGHT_DATABASE` at a Postgres URL where that file would not survive, which is any
+container platform that rebuilds its filesystem on restart. Install the driver with the
+`postgres` extra, and **name it in the URL**: a managed Postgres hands you `postgresql://…`,
+and pasted as-is SQLAlchemy looks for psycopg2 and startup dies with
+`ModuleNotFoundError: No module named 'psycopg2'`.
+
+```bash
+pip install -e ".[web,postgres]"
+export CHAINSIGHT_DATABASE="postgresql+psycopg://user:password@host/chainsight?sslmode=require"
+```
+
+[ADR 0014](docs/adr/0014-postgres-when-the-filesystem-does-not-persist.md) records why, and
+what a deployment on a shared database still does not get.
+
 Money is shown in **dollars**, which is what this dataset is priced in: every customer in it
 is in the United States or Puerto Rico, and no product is ever sold at two prices — the same
 kayak is 59.99 into all 150 countries it reaches, so there is one set of books rather than a
