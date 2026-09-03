@@ -138,7 +138,7 @@ carries 0.9. A single `if` on shipping mode scores 0.6953 accuracy, so that, and
 ## Status
 
 **`v1.1.0`.** Every phase below is a branch and a tag, and every one landed behind a green CI
-run on Python 3.11 and 3.12. 611 tests; `src/` at 100% line and branch coverage, and the
+run on Python 3.11 and 3.12. 615 tests; `src/` at 100% line and branch coverage, and the
 web suite runs a second time against a real Postgres.
 
 | Phase | State |
@@ -246,10 +246,11 @@ what a deployment on a shared database still does not get.
 [`deploy/hf/`](deploy/hf/) holds a Dockerfile, an entrypoint and the Space's own README, plus
 the runbook. Three things about it are decisions rather than boilerplate:
 
-- **The image installs a tag, and trains at build.** No working tree is copied and no
-  `.joblib` is shipped. `SECURITY.md` says loading an artefact somebody sent you is
-  equivalent to running a script they sent you, and an image is not a loophole in that — the
-  500-row sample is fitted during the build instead, in seconds.
+- **The image trains at build and ships no `.joblib`.** `SECURITY.md` says loading an
+  artefact somebody sent you is equivalent to running a script they sent you, and an image is
+  not a loophole in that — the 500-row sample is fitted during the build instead, in seconds.
+  `push-space.sh` assembles what gets deployed from a `git archive` of the current commit, and
+  refuses to run against a dirty tree.
 - **The data lives in Postgres.** A Space's filesystem is rebuilt on every restart, which
   would take every registered account with it and reset the table the rate limiter counts in,
   making "cause a restart" the cheapest way past the limit.

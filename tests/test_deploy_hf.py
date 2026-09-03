@@ -18,14 +18,13 @@ DEPLOY = REPO / "deploy" / "hf"
 DOCKERFILE = DEPLOY / "Dockerfile"
 ENTRYPOINT = DEPLOY / "entrypoint.sh"
 SPACE_README = DEPLOY / "README-space.md"
+PUSH = DEPLOY / "push-space.sh"
 
 #: Names the deployment invents for itself. Everything else it sets has to be a name the
 #: application actually reads.
 NOT_APPLICATION_SETTINGS = {
     "CHAINSIGHT_ADMIN_EMAIL",
     "CHAINSIGHT_ADMIN_PASSWORD",
-    "CHAINSIGHT_REF",
-    "CHAINSIGHT_SLUG",
 }
 
 SETTING = re.compile(r"CHAINSIGHT_[A-Z_]+")
@@ -73,12 +72,26 @@ class TestTheImage:
 
         assert exported <= known, f"not read by anything in src/: {sorted(exported - known)}"
 
-    def test_it_installs_a_named_tag_rather_than_a_moving_branch(self) -> None:
-        """A Space rebuilt against whatever `main` was is not a thing you can reason about."""
-        declared = re.search(r"ARG CHAINSIGHT_REF=(\S+)", DOCKERFILE.read_text(encoding="utf-8"))
+    def test_it_builds_from_the_source_beside_it(self) -> None:
+        """Not from a URL. This repository is private, so an unauthenticated build 404s.
 
-        assert declared is not None
-        assert re.fullmatch(r"v\d+\.\d+\.\d+", declared.group(1))
+        The first version of the Dockerfile installed a release tarball from GitHub, which is
+        tidier and does not work: `pip` inside a Space build has no credentials. Fetching it
+        with a token would put a credential in a deployment in order to avoid copying files
+        the deployment is already being handed.
+        """
+        body = DOCKERFILE.read_text(encoding="utf-8")
+
+        assert "COPY --chown=user:user src ./src" in body
+        assert 'pip install --no-cache-dir --user ".[web,postgres]"' in body
+        assert "https://github.com" not in body
+        assert "https://raw.githubusercontent.com" not in body
+
+    def test_the_sample_it_trains_on_is_copied_in(self) -> None:
+        """`train --sample` reads a path relative to the working directory."""
+        assert "data/sample_orders.csv ./data/sample_orders.csv" in DOCKERFILE.read_text(
+            encoding="utf-8"
+        )
 
     def test_it_ships_no_trained_model(self) -> None:
         """SECURITY.md refuses to commit a joblib; an image is not a loophole in that."""
@@ -113,3 +126,16 @@ class TestTheEntrypoint:
         )
 
         assert "--reset-password" not in commands
+
+
+class TestThePushScript:
+    def test_it_has_unix_line_endings(self) -> None:
+        assert b"\r" not in PUSH.read_bytes()
+
+    def test_it_refuses_to_deploy_an_uncommitted_tree(self) -> None:
+        """Otherwise the Space runs a commit that exists nowhere, including in your history."""
+        assert "diff-index --quiet HEAD" in PUSH.read_text(encoding="utf-8")
+
+    def test_it_sends_the_space_readme_as_the_readme(self) -> None:
+        """A Space reads its configuration from the front matter of its own README."""
+        assert 'README-space.md" "$WORK/README.md"' in PUSH.read_text(encoding="utf-8")

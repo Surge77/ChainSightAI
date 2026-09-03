@@ -1,16 +1,16 @@
 # ChainSight as a Hugging Face Docker Space.
 #
-# The image installs a *tag* of this repository rather than copying a working tree, so what
-# runs in the Space is a commit you can name. Set CHAINSIGHT_REF to that tag; if it does not
-# exist the build fails at pip, which is the loud failure rather than the quiet one where a
-# Space serves whatever `main` happened to be that afternoon.
+# Builds from the source pushed alongside it rather than installing a tag from GitHub. The
+# first draft of this file did the latter, which is tidier and does not work: this repository
+# is private, so an unauthenticated build gets a 404 from both the release tarball and the
+# raw file. Putting a token in the Space to fix that would be a credential in a deployment in
+# order to avoid copying files it is already being given.
 #
-# Installed from the release tarball rather than `git+https://`, so the image needs no git.
+# `push-space.sh` assembles the tree — a `git archive` of the commit you are on, plus the
+# three files in this directory — so what is pushed is a commit you can name, without this
+# directory drifting from what it deploys.
 
 FROM python:3.12-slim
-
-ARG CHAINSIGHT_SLUG=Surge77/ChainSightAI
-ARG CHAINSIGHT_REF=v1.2.0
 
 # HF runs Spaces as uid 1000. The working directory is created and handed over *before* the
 # USER switch: WORKDIR creates a missing directory as root whatever USER is in effect, and a
@@ -27,23 +27,25 @@ ENV PATH=/home/user/.local/bin:$PATH
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 
+# README.md is here because `pyproject.toml` names it as the package readme; the build fails
+# without it. In the assembled tree it is the Space's own README rather than the project's.
+COPY --chown=user:user pyproject.toml README.md ./
+COPY --chown=user:user src ./src
+
+# The 500-order committed slice. The full DataCo table is ~92 MB and is not ours to
+# redistribute, so it is not here and will not be — see `SECURITY.md`. Everything this Space
+# does runs on the sample.
+COPY --chown=user:user data/sample_orders.csv ./data/sample_orders.csv
+
 # `[web,postgres]` — the application and a Postgres driver. Both are extras on purpose;
 # `pyproject.toml` argues why neither belongs in the base package.
-RUN python -m pip install --no-cache-dir --user \
-    "chainsight[web,postgres] @ https://github.com/${CHAINSIGHT_SLUG}/archive/refs/tags/${CHAINSIGHT_REF}.tar.gz"
-
-# The 500-order committed slice, from the same tag as the code. The full DataCo table is
-# ~92 MB and is not ours to redistribute, so it is not here and will not be — see
-# `SECURITY.md`. Everything this Space does runs on the sample.
-ADD --chown=user:user \
-    https://raw.githubusercontent.com/${CHAINSIGHT_SLUG}/${CHAINSIGHT_REF}/data/sample_orders.csv \
-    /home/user/app/data/sample_orders.csv
+RUN python -m pip install --no-cache-dir --user ".[web,postgres]"
 
 # Train at build rather than shipping a joblib. `SECURITY.md` says loading an artefact
 # somebody sent you is equivalent to running a script they sent you, and a repository that
-# refuses to commit a pickled model should not smuggle one into an image either. Fitting the
-# 500-row sample takes seconds, and the manifest hashes are checked on load exactly as they
-# would be locally.
+# refuses to commit a pickled model should not smuggle one into an image. Fitting the 500-row
+# sample takes seconds, and the manifest hashes are checked on load exactly as they would be
+# locally.
 RUN python -m chainsight train --sample --promote
 
 # The bind address and port the platform expects.

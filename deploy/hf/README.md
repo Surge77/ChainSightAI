@@ -1,24 +1,19 @@
 # Deploying ChainSight as a Hugging Face Space
 
-Three files. `Dockerfile` and `entrypoint.sh` go to the Space unchanged; `README-space.md`
-goes there as `README.md`, because a Space is configured by the YAML front matter at the top
-of its README and this repository's own README should not carry a platform's config table
-above its first paragraph.
+`push-space.sh` does the assembly: a `git archive` of the commit you are on, plus the
+`Dockerfile` and `entrypoint.sh` here, plus `README-space.md` as the Space's `README.md`. A
+Space is configured by the YAML front matter at the top of its README, and this repository's
+own README should not carry a platform's config table above its first paragraph — which is
+why the two are separate files rather than one.
 
-Nothing here copies the source. The image installs a tag from GitHub, so the Space runs a
-commit you can name, and this directory does not drift away from what it deploys.
+The image builds from that source rather than installing a tag from GitHub. The tidier
+version did the latter and does not work: **this repository is private**, so an
+unauthenticated build gets a 404 from the release tarball and the raw file alike, and fixing
+that with a token would put a credential in a deployment to avoid copying files it is already
+being handed. If you make the repository public, installing a pinned tag becomes possible
+again and this script becomes optional.
 
 ## Before anything else
-
-**Tag the release.** `CHAINSIGHT_REF` in the `Dockerfile` defaults to `v1.2.0` and the build
-fails at `pip` if that tag does not exist. That is deliberate: a Space that quietly rebuilt
-itself against whatever `main` was that afternoon is not something you can reason about
-later.
-
-```sh
-git tag -a v1.2.0 -m "rate limiting, Postgres, packaged web assets"
-git push origin --tags
-```
 
 **Create a Postgres.** Any managed Postgres; the free tier of a serverless one is the point
 of [ADR 0014](../../docs/adr/0014-postgres-when-the-filesystem-does-not-persist.md). A Space's
@@ -39,15 +34,15 @@ driver from the scheme and psycopg2 is not installed.
 ## The Space
 
 Create a **Docker** Space (not Gradio — this is a server-rendered FastAPI application with
-sessions, CSRF and an admin surface; no SDK template hosts it). Then:
+sessions, CSRF and an admin surface; no SDK template hosts it). Then, from a clean tree:
 
 ```sh
-git clone https://huggingface.co/spaces/<you>/chainsight && cd chainsight
-cp /path/to/ChainSightAI/deploy/hf/Dockerfile .
-cp /path/to/ChainSightAI/deploy/hf/entrypoint.sh .
-cp /path/to/ChainSightAI/deploy/hf/README-space.md README.md
-git add . && git commit -m "ChainSight" && git push
+deploy/hf/push-space.sh https://huggingface.co/spaces/<you>/chainsight
 ```
+
+It refuses to run against a dirty working tree, so what the Space builds is always a commit
+that exists in your history. Set the secrets below **before** the first push, or the container
+will build and then exit on the missing session secret.
 
 ## Settings
 

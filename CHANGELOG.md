@@ -14,14 +14,18 @@ passwords as anybody cared to post, a wheel with no pages in it, and a database 
 a filesystem rebuilt every restart. All three are closed, and `deploy/hf/` is the container
 that follows from them.
 
-611 tests. `src/` at 100% line and branch coverage, on Python 3.11 and 3.12, and the web
+615 tests. `src/` at 100% line and branch coverage, on Python 3.11 and 3.12, and the web
 suite runs a second time against a real Postgres.
 
 ### Added
 - `deploy/hf/` — a Dockerfile, an entrypoint and a runbook for hosting this as a Hugging Face
-  Docker Space. The image installs a named tag rather than copying a working tree, and trains
-  the 500-row sample during the build rather than shipping a `.joblib`, because a repository
-  that refuses to commit a pickled model should not smuggle one into an image. The first
+  Docker Space, plus `push-space.sh`, which assembles the Space's tree from a `git archive` of
+  the current commit and refuses to run against a dirty one. The image builds from that source
+  rather than installing a tag from GitHub, because this repository is private and an
+  unauthenticated build 404s on both the release tarball and the raw file — the alternative
+  was a credential in a deployment to avoid copying files it is already handed. It trains the
+  500-row sample during the build rather than shipping a `.joblib`, because a repository that
+  refuses to commit a pickled model should not smuggle one into an image. The first
   administrator is made by the entrypoint, since `chainsight_web init` normally wants a shell
   and a Space has none; running it on every start is a no-op after the first.
 - `tests/test_deploy_hf.py`, which checks the deployment files against the application they
