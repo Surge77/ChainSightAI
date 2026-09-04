@@ -174,3 +174,10 @@ nothing entered through the application reaches the training data.
       describes a thing nobody can visit.
 - [ ] Rotate the Neon password. It was pasted into a chat transcript while setting this up,
       which is the kind of thing that is fine until it is not.
+- [ ] **Watch the free instance hours around the 25th of each month.** An UptimeRobot monitor
+      pings `/static/favicon.svg` every five minutes to keep the container warm, which spends
+      roughly 730 of the workspace's 750 monthly instance-hours. That fits only while the other
+      free service stays idle — it is currently at half an hour per four days — and there is no
+      alarm on it. Render suspends rather than bills, there being no card on file, so the
+      failure mode is the demo going dark late in the month. `deploy/docker/README.md` argues
+      the whole trade. Pause the monitor if the margin gets thin.

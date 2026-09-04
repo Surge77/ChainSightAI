@@ -87,12 +87,29 @@ all.
 `CHAINSIGHT_DATASET` points the retrain button at the committed sample, so retraining from
 `/admin` works and produces a model fitted on 500 orders. Do not quote its scores.
 
-**The first request after idle is slow.** A free instance sleeps after minutes without
-traffic and a serverless Postgres suspends on its own schedule. Both wake on demand, and the
-first request pays for both. A keep-alive pinger is the obvious fix and mostly the wrong one:
-it keeps the *database* awake too, which spends the metered resource to protect the unmetered
-one. If you ping anyway, ping `/static/favicon.svg` — no session, no database, and no
-interaction with the rate limiter.
+**The first request after idle is slow, and this deployment pings itself about it.** A free
+instance sleeps after minutes without traffic and a serverless Postgres suspends on its own
+schedule. Both wake on demand, and the first request pays for both — about fifty seconds of
+it is the container.
+
+A keep-alive pinger is the obvious fix and is half wrong, which is why *what* it pings is the
+whole decision. Point it at a page and it wakes the database too, spending the metered
+resource to protect the unmetered one. Point it at `/static/favicon.svg` and it wakes only the
+container: that path is served by `StaticFiles`, so it touches no session, no database and no
+rate-limit budget. The fifty seconds go and Postgres stays asleep, leaving the first real
+sign-in to pay a wake measured in seconds instead.
+
+The live deployment runs exactly that — UptimeRobot, five-minute interval, against the favicon
+— because Render sleeps a free instance after fifteen minutes and five is a comfortable margin.
+
+What that costs is worth writing down, because it is not obvious and it is shared. Render's
+free allowance is **750 instance-hours per month across the whole workspace**, not per service.
+A service kept awake around the clock spends roughly 730 of them, so one pinger very nearly
+exhausts the account. It fits here only because the other free service in this workspace is
+genuinely idle — measured at half an hour across four days — and it would stop fitting the
+moment a second service were kept warm the same way. Scheduling the pinger to sleep overnight
+would be the fix; UptimeRobot puts maintenance windows behind a paid plan, so the alternative
+on the free tier is the Pause button and remembering to use it.
 
 ## If it does not come up
 
