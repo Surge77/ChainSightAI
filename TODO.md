@@ -144,6 +144,26 @@ nothing entered through the application reaches the training data.
 
 ## Deferred infrastructure
 
-- [ ] Dockerfile and compose.
-- [ ] Postgres. SQLite is sufficient for a single-node portfolio deployment and the schema
-      is written to survive the swap.
+- [x] ~~Dockerfile and compose.~~ Two Dockerfiles, and no compose. `deploy/hf/` is the
+      Hugging Face Space and `deploy/docker/` is every other host, kept apart because a Space
+      fixes its port at build time and a generic host injects one at run time — a single file
+      serving both would have to read its own platform out of the environment. Compose was
+      not written rather than skipped: it orchestrates one container against a managed
+      Postgres somebody else runs, which is a `docker run` with four `-e` flags, and
+      `deploy/docker/README.md` prints it.
+- [x] ~~Postgres. SQLite is sufficient for a single-node portfolio deployment and the schema
+      is written to survive the swap.~~ Swapped in `v1.2.0`, through `CHAINSIGHT_DATABASE`.
+      SQLite stays the default; Postgres is what a filesystem rebuilt on every restart asks
+      for. `psycopg[binary]` is its own extra, and CI runs the web suite a second time
+      against a real `postgres:17`.
+      [ADR 0014](docs/adr/0014-postgres-when-the-filesystem-does-not-persist.md).
+
+## Deployment, not yet done
+
+- [ ] **Nothing is deployed yet.** Both containers are written, test-covered and never built
+      — there is no Docker on the development machine, so the first real build of either will
+      happen on the platform. The Hugging Face route is blocked on that account: Docker Spaces
+      are a paid feature there, and no SDK template hosts a server-rendered application with
+      sessions and an admin surface.
+- [ ] Once a deployment answers on a URL, put it in `README.md` and in the Space's own
+      `README-space.md`, both of which currently describe a thing nobody can visit.

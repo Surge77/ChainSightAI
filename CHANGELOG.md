@@ -6,6 +6,37 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+- `deploy/docker/` — a Dockerfile, an entrypoint and a runbook for hosting this on a generic
+  Docker host, plus `render.yaml` at the root as a Render Blueprint. It is a second Dockerfile
+  rather than a flag on the first because the two platforms disagree about the thing most
+  likely to break a deployment: a Space is told its port at build time and bakes it in, while
+  Render, Koyeb and Fly choose one at run time and inject it as `PORT`. An image that gets
+  that wrong builds, starts, logs a clean startup line, and fails its health check against a
+  port nothing is listening on. Nothing is assembled — the repository is public, so the
+  platform clones it and builds against the root, which is `push-space.sh`'s whole job made
+  unnecessary rather than duplicated.
+- `tests/test_deploy_docker.py`, the sibling of `test_deploy_hf.py`, checking the second image
+  against the application it deploys. It carries one assertion the Space's file has no reason
+  to: `chainsight train` writes to `persistence.ARTEFACTS_DIR`, a *relative* `Path("artifacts")`
+  resolved against the working directory, while the application reads `CHAINSIGHT_ARTEFACTS`.
+  Nothing connects the two but a Dockerfile agreeing with itself, and disagreeing is silent at
+  both ends — the build succeeds, having trained a model, and the container starts, serving
+  from a directory nobody put one in.
+- All four secrets in `render.yaml` are `sync: false`, so the blueprint names them and is
+  structurally unable to carry their values. A blueprint that could hold a secret would be a
+  secret in git history.
+
+### Changed
+- The repository is public. The Dockerfile in `deploy/hf/` builds from the source pushed
+  beside it because it was private and an unauthenticated build 404s; that is now a
+  belt-and-braces choice rather than a necessity, and it is left alone — a deployment that
+  copies files it is already being handed has one fewer thing that can fail.
+- `TODO.md`'s "deferred infrastructure" section said a Dockerfile and Postgres were still
+  missing. Postgres shipped in 1.2.0 and there are now two Dockerfiles; both lines are closed
+  where they stood, and a "not yet deployed" item replaces them, because neither image has
+  ever been built — there is no Docker on the development machine.
+
 ## [1.2.0] - 2026-09-03
 
 **The release that makes this deployable in public.** Three things stood between a working

@@ -259,6 +259,23 @@ the runbook. Three things about it are decisions rather than boilerplate:
   reachable and the rate limiter is decorative; leave it at the default behind a proxy and
   every visitor shares one budget.
 
+### Running it anywhere else
+
+[`deploy/docker/`](deploy/docker/) is the same application for a generic Docker host — Render,
+Koyeb, Fly — with [`render.yaml`](render.yaml) at the root as a Render Blueprint. It is a
+second Dockerfile rather than a flag on the first because the two platforms disagree about
+the thing most likely to break a deployment: a Space is told its port at build time and bakes
+it in, while these hosts choose one at run time, inject it as `PORT`, and route to it. An
+image that gets that wrong builds, starts, logs a clean startup line, and answers nothing.
+
+Nothing needs assembling — the repository is public, so the platform clones it and builds
+against the repository root. All four secrets are `sync: false` in the blueprint, so it names
+them and cannot carry their values. `deploy/docker/README.md` is the runbook, and
+`tests/test_deploy_docker.py` checks the image against the application it deploys, including
+the coupling with no error message on either end of it: `chainsight train` writes to a path
+relative to the working directory and the application reads `CHAINSIGHT_ARTEFACTS`, so a
+Dockerfile that disagrees with itself trains a model and then serves from an empty directory.
+
 Money is shown in **dollars**, which is what this dataset is priced in: every customer in it
 is in the United States or Puerto Rico, and no product is ever sold at two prices — the same
 kayak is 59.99 into all 150 countries it reaches, so there is one set of books rather than a
