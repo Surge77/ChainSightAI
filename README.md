@@ -5,6 +5,12 @@
 [![License: MIT](https://img.shields.io/badge/licence-MIT-green)](LICENSE)
 [![Checked with pyright](https://img.shields.io/badge/types-pyright-blue)](https://github.com/microsoft/pyright)
 
+**Live demo: https://chainsight-wf9i.onrender.com** — register an account and enter an order.
+Two things to know before you judge what it says. It is **trained on the 500-row committed
+sample**, not the 180,519-row table the figures in this README come from, because that table
+is ~92 MB and is not ours to redistribute. And it runs on a free instance that sleeps, so the
+first request after an idle spell waits for both the container and the database to wake.
+
 ## What this is, in plain terms
 
 An order has been placed and has not shipped yet. ChainSight estimates **how likely it is to

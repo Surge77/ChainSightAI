@@ -160,10 +160,17 @@ nothing entered through the application reaches the training data.
 
 ## Deployment, not yet done
 
-- [ ] **Nothing is deployed yet.** Both containers are written, test-covered and never built
-      — there is no Docker on the development machine, so the first real build of either will
-      happen on the platform. The Hugging Face route is blocked on that account: Docker Spaces
-      are a paid feature there, and no SDK template hosts a server-rendered application with
-      sessions and an admin surface.
-- [ ] Once a deployment answers on a URL, put it in `README.md` and in the Space's own
-      `README-space.md`, both of which currently describe a thing nobody can visit.
+- [x] ~~Nothing is deployed yet.~~ Live at **https://chainsight-wf9i.onrender.com**, from
+      `deploy/docker/` via `render.yaml`, on Render's free tier against a Neon Postgres. The
+      first build of that image was the one the platform did; it worked. Sign-in was checked
+      end to end against the deployment — CSRF token issued, `POST /login` lands on `/orders`,
+      session cookie set — which exercises Neon, bcrypt and the session signer together.
+- [x] ~~Put the URL in `README.md`.~~ Done, with the two caveats a visitor needs: it is
+      trained on the 500-row sample, and the free instance sleeps.
+- [ ] The Hugging Face Space is written and unused. Docker Spaces are a paid feature on that
+      account, and no SDK template hosts a server-rendered application with sessions and an
+      admin surface, so `deploy/hf/` has still never been built. Either pay for it, delete it,
+      or leave it as the second deployment target it already is — but `README-space.md` still
+      describes a thing nobody can visit.
+- [ ] Rotate the Neon password. It was pasted into a chat transcript while setting this up,
+      which is the kind of thing that is fine until it is not.
