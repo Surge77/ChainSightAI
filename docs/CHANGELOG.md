@@ -72,7 +72,7 @@ suite runs a second time against a real Postgres.
   cheapest way past the limit. `psycopg[binary]` is its own `postgres` extra, because nothing
   in the application imports it and somebody running against a file should not have to
   acquire a database driver.
-  [ADR 0014](docs/adr/0014-postgres-when-the-filesystem-does-not-persist.md).
+  [ADR 0014](adr/0014-postgres-when-the-filesystem-does-not-persist.md).
 - A second CI job running the web suite against a real `postgres:17`. The dialect a
   deployment serves on should not be the one dialect nothing tests: SQLite returns a naive
   datetime from a timezone-aware column and Postgres returns an aware one, and mixing them is
@@ -90,7 +90,7 @@ suite runs a second time against a real Postgres.
   else, which matters because the cost model at `/admin/costs` is the operator's own money
   rather than the dataset's. Only two-decimal currencies are accepted: an unsupported code
   stops the process at startup rather than printing cents that the currency does not have.
-  [ADR 0012](docs/adr/0012-name-the-currency.md).
+  [ADR 0012](adr/0012-name-the-currency.md).
 - Rate limiting on every POST a stranger can reach. Ten sign-in attempts per source address
   per fifteen minutes, shared between `/login` and `/admin/login`; five registrations per
   address per hour. The window slides, so there is no lockout period to serve — an address
@@ -150,8 +150,8 @@ suite runs a second time against a real Postgres.
   was `intervention / (intervention + late cost)` — Elkan's false-positive rule, which
   charges the intervention only when it turns out to have been unnecessary — while net
   benefit charged it always. Both now derive from one accounting, and the threshold on the
-  default costs is 0.4216 rather than 0.2966. [ADR 0011](docs/adr/0011-one-set-of-books.md)
-  records the correction; [ADR 0006](docs/adr/0006-derive-the-threshold.md) is marked as
+  default costs is 0.4216 rather than 0.2966. [ADR 0011](adr/0011-one-set-of-books.md)
+  records the correction; [ADR 0006](adr/0006-derive-the-threshold.md) is marked as
   corrected rather than rewritten.
 - The application refuses to start against a database that predates a column, naming the
   column and both ways out, instead of failing as a 500 inside a template on the first

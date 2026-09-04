@@ -101,4 +101,4 @@ results table that describes a previous version of the model is worse than no ta
 
 `data/raw/` is gitignored and stays that way. Never commit the DataCo CSV, and never commit
 anything derived from it that still carries `Customer Password`, `Customer Email`, a
-customer name, a street, or a zipcode — see [SECURITY.md](SECURITY.md).
+customer name, a street, or a zipcode — see [SECURITY.md](../SECURITY.md).
